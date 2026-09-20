@@ -66,6 +66,9 @@
         上下文回答(流式)
       </button>
       <button type="button" @click="queryChatHistory">查询会话历史</button>
+      <button type="button" @click="loadDocuments">文本入库</button>
+      <button type="button" @click="vectorSearch">向量检索</button>
+      <button type="button" @click="ragSearch">RAG检索</button>
 
       <div class="response-title">回答：</div>
       <div class="response-message" v-if="responseMessage">
@@ -488,6 +491,78 @@ const queryChatHistory = async (): Promise<void> => {
     responseMessage.value = "查询会话历史失败";
   } finally {
     scrollToBottom();
+  }
+};
+
+const loadDocuments = async (): Promise<void> => {
+  try {
+    const data = {
+      documents: [
+        {
+          id: new Date().getTime().toString(),
+          content: message.value,
+          source: "yy",
+        },
+      ],
+    };
+    const response = await axios.post("/rag/load", data);
+    responseMessage.value = {
+      answer: response.data.message,
+    };
+  } catch (error) {
+    console.error("提问失败:", error.response?.data);
+    responseMessage.value = "提问失败";
+  }
+};
+
+const vectorSearch = async (): Promise<void> => {
+  try {
+    const data = {
+      query: message.value,
+    };
+    const response = await axios.post("/rag/search", data);
+    // responseMessage.value = {
+    //   answer: response.data.results
+    //     .map((item: any, index: number) => `回答${index + 1}. ${item.content}`)
+    //     .join("\n"),
+    // };
+    historyMessage.value = response.data.results.map((item: any) => ({
+      role: "assistant",
+      content: item.content,
+    }));
+  } catch (error) {
+    console.error("提问失败:", error.response?.data);
+    responseMessage.value = "提问失败";
+  }
+};
+
+const ragSearch = async (): Promise<void> => {
+  responseMessage.value = { answer: "" };
+  const { promise } = streamResponse(
+    `${axios.defaults.baseURL}/rag/query`,
+    { question: message.value },
+    {
+      onMessage: (chunk: any) => {
+        if (chunk.type === "text") {
+          responseMessage.value.answer += chunk.text;
+        }
+        if (chunk.type === "source") {
+          historyMessage.value = chunk.text.map((item: any) => ({
+            role: "assistant",
+            content: item.content,
+          }));
+        }
+      },
+      onError: (error) => {
+        console.error("流式提问失败:", error);
+        responseMessage.value.answer = "提问失败，请检查模型服务是否正常";
+      },
+    },
+  );
+
+  try {
+    await promise;
+  } finally {
   }
 };
 
