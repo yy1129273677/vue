@@ -60,6 +60,12 @@
       <button type="button" @click="polishArticle">文章润色</button>
       <button type="button" @click="generateArticle">生成博客</button>
       <button type="button" @click="smartRouter">智能回答</button>
+      <button type="button" @click="runAgent">agent回答</button>
+      <button type="button" @click="contextualAnswer">上下文回答</button>
+      <button type="button" @click="contextualAnswerStream">
+        上下文回答(流式)
+      </button>
+      <button type="button" @click="queryChatHistory">查询会话历史</button>
 
       <div class="response-title">回答：</div>
       <div class="response-message" v-if="responseMessage">
@@ -68,6 +74,20 @@
         </div>
         <!-- v-html：把 markdown-it 解析出的 HTML 直接渲染到页面 -->
         <div class="markdown-body" v-html="renderedAnswer"></div>
+      </div>
+
+      <div class="response-title" v-if="renderedHistory.length > 0">
+        会话历史：
+      </div>
+      <div
+        v-for="item in renderedHistory"
+        :key="item.id"
+        :class="item.role !== 'user' ? 'assistant-message' : 'user-message'"
+      >
+        <div class="response-role">
+          {{ item.role === "user" ? "用户提问" : "助手回答" }}：
+        </div>
+        <div class="markdown-body" v-html="item.content"></div>
       </div>
     </div>
   </div>
@@ -96,6 +116,15 @@ const renderedAnswer = computed(() => {
   return md.render(responseMessage.value.answer);
 });
 
+const renderedHistory = computed(() => {
+  if (!historyMessage.value) return [];
+  historyMessage.value.forEach((item: any) => {
+    item.content = md.render(item.content);
+  });
+
+  return historyMessage.value;
+});
+
 defineProps<{ msg: string }>();
 
 const rest = (): void => {
@@ -109,8 +138,19 @@ const author = ref<any>();
 const articles = ref<any[]>([]);
 const message = ref<string>();
 const responseMessage = ref<any>();
+const historyMessage = ref<any>();
 // 是否正在流式输出（用于按钮禁用/状态显示）
 const isStreaming = ref(false);
+
+//自动将滚动条滚动到最底部,动画效果
+const scrollToBottom = (className = "scroll-container") => {
+  let scrollContainer = document.querySelector(`.${className}`);
+  console.log(scrollContainer);
+  if (!scrollContainer) return;
+  if (scrollContainer) {
+    scrollContainer.scrollTop = scrollContainer.scrollHeight;
+  }
+};
 
 const createNewUser = async (): Promise<void> => {
   count.value++;
@@ -376,6 +416,81 @@ const smartRouter = async (): Promise<void> => {
   }
 };
 
+const runAgent = async (): Promise<void> => {
+  responseMessage.value = { answer: "" };
+  const { promise } = streamResponse(
+    `${axios.defaults.baseURL}/agents/run`,
+    { message: message.value, sessionId: "yy" },
+    {
+      onMessage: (chunk: any) => {
+        if (chunk.type === "chunk") responseMessage.value.answer += chunk.text;
+      },
+      onError: (error) => {
+        console.error("流式提问失败:", error);
+        responseMessage.value.answer = "提问失败，请检查模型服务是否正常";
+      },
+    },
+  );
+
+  try {
+    await promise;
+  } finally {
+  }
+};
+
+const contextualAnswer = async (): Promise<void> => {
+  try {
+    const data = {
+      sessionId: "yy",
+      message: message.value,
+    };
+    const response = await axios.post("/memory/chat", data);
+    responseMessage.value = {
+      answer: response.data.reply,
+    };
+  } catch (error) {
+    console.error("提问失败:", error.response?.data);
+    responseMessage.value = "提问失败";
+  }
+};
+
+const contextualAnswerStream = async (): Promise<void> => {
+  responseMessage.value = { answer: "" };
+  const { promise } = streamResponse(
+    `${axios.defaults.baseURL}/memory/chat-stream`,
+    { sessionId: "yy", message: message.value },
+    {
+      onMessage: (chunk: any) => {
+        responseMessage.value.answer += chunk.text;
+      },
+      onError: (error) => {
+        console.error("流式提问失败:", error);
+        responseMessage.value.answer = "提问失败，请检查模型服务是否正常";
+      },
+    },
+  );
+
+  try {
+    await promise;
+  } finally {
+  }
+};
+
+const queryChatHistory = async (): Promise<void> => {
+  try {
+    const data = {
+      sessionId: "yy",
+    };
+    const response = await axios.get("/memory/chat-history", { params: data });
+    historyMessage.value = response.data.messages;
+  } catch (error) {
+    console.error("查询会话历史失败:", error.response?.data);
+    responseMessage.value = "查询会话历史失败";
+  } finally {
+    scrollToBottom();
+  }
+};
+
 defineExpose({ rest });
 </script>
 
@@ -385,6 +500,8 @@ defineExpose({ rest });
   background: #f9fafb;
   border-radius: 8px;
   margin-bottom: 1rem;
+  // overflow: auto;
+  // height: 400px;
   .section-container {
     margin-bottom: 1rem;
     padding: 0.5rem;
@@ -423,6 +540,26 @@ defineExpose({ rest });
     font-weight: bold;
     margin-bottom: 0.5rem;
     margin-top: 1rem;
+  }
+  .user-message {
+    color: #333;
+    margin-bottom: 1rem;
+    padding: 0.5rem;
+    border-radius: 4px;
+    background: #fff;
+  }
+  .assistant-message {
+    margin-top: 1rem;
+    border-left: 4px solid #42b883;
+    padding-left: 0.5rem;
+    border-radius: 5px;
+    color: #42b883;
+
+    border-bottom: 1px solid #42b883;
+  }
+  .response-role {
+    margin-top: 1rem;
+    font-weight: bold;
   }
   .response-message {
     margin-top: 1rem;
