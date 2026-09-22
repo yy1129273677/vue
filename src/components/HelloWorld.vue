@@ -69,6 +69,8 @@
       <button type="button" @click="loadDocuments">文本入库</button>
       <button type="button" @click="vectorSearch">向量检索</button>
       <button type="button" @click="ragSearch">RAG检索</button>
+      <button type="button" @click="queryDocuments">查询知识库文档</button>
+      <button type="button" @click="deleteDocumentById">删除知识库文档</button>
 
       <div class="response-title">回答：</div>
       <div class="response-message" v-if="responseMessage">
@@ -83,12 +85,13 @@
         会话历史：
       </div>
       <div
-        v-for="item in renderedHistory"
+        v-for="(item, index) in renderedHistory"
         :key="item.id"
         :class="item.role !== 'user' ? 'assistant-message' : 'user-message'"
       >
         <div class="response-role">
-          {{ item.role === "user" ? "用户提问" : "助手回答" }}：
+          {{ item.role === "user" ? "用户提问" : "助手回答"
+          }}{{ index + 1 }}.：id={{ item.id }}
         </div>
         <div class="markdown-body" v-html="item.content"></div>
       </div>
@@ -114,12 +117,12 @@ const md = new MarkdownIt({
 
 // computed 计算属性：把接口返回的 Markdown 答案转成 HTML
 // 当 responseMessage.answer 变化时自动重新计算
-const renderedAnswer = computed(() => {
+const renderedAnswer = computed<string>(() => {
   if (!responseMessage.value?.answer) return "";
   return md.render(responseMessage.value.answer);
 });
 
-const renderedHistory = computed(() => {
+const renderedHistory = computed<any[]>(() => {
   if (!historyMessage.value) return [];
   historyMessage.value.forEach((item: any) => {
     item.content = md.render(item.content);
@@ -563,6 +566,42 @@ const ragSearch = async (): Promise<void> => {
   try {
     await promise;
   } finally {
+  }
+};
+
+const queryDocuments = async (): Promise<void> => {
+  try {
+    const response = await axios.get("/rag/listDocuments");
+    historyMessage.value = response.data.documents.map((item: any) => ({
+      role: "assistant",
+      content: item.content,
+      source: item.source,
+      id: item.id,
+    }));
+  } catch (error) {
+    console.error("查询知识库文档失败:", error.response?.data);
+    responseMessage.value = "查询知识库文档失败";
+  }
+};
+
+const deleteDocumentById = async (): Promise<void> => {
+  try {
+    const response = await axios.delete(
+      `/rag/deleteDocumentById/${message.value}`,
+    );
+    if (response.data.success) {
+      responseMessage.value = {
+        answer: response.data.message,
+      };
+    } else {
+      responseMessage.value = {
+        answer: response.data.message,
+      };
+    }
+    queryDocuments();
+  } catch (error) {
+    console.error("删除知识库文档失败:", error.response?.data);
+    responseMessage.value = "删除知识库文档失败";
   }
 };
 

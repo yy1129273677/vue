@@ -12,11 +12,11 @@ export default defineConfig(({ mode }) => {
       port: Number(env.VITE_PORT) || 5173,
       open: env.VITE_OPEN === "true",
       proxy: {
-        "/api": {
-          target: env.VITE_API_BASE || "http://localhost:3000",
-          changeOrigin: true,
-          rewrite: (path) => path.replace(/^\/api/, ""),
-        },
+        // "/api": {
+        //   target: env.VITE_API_BASE || "http://localhost:3000",
+        //   changeOrigin: true,
+        //   rewrite: (path) => path.replace(/^\/api/, ""),
+        // },
       },
     },
     resolve: {

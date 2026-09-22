@@ -40,11 +40,14 @@ export function streamResponse(
     reader?.cancel();
   };
 
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 30000);
   const promise = (async (): Promise<string> => {
     try {
       const response = await fetch(url, {
         method: "POST",
         body: JSON.stringify(data),
+        signal: controller.signal,
         headers: {
           "Content-Type": "application/json",
         },
@@ -113,6 +116,8 @@ export function streamResponse(
       throw err;
     }
   })();
+
+  clearTimeout(timeout);
 
   return { promise, cancel };
 }
