@@ -71,6 +71,7 @@
       <button type="button" @click="ragSearch">RAG检索</button>
       <button type="button" @click="queryDocuments">查询知识库文档</button>
       <button type="button" @click="deleteDocumentById">删除知识库文档</button>
+      <button type="button" @click="callMcpAgent">MCP回答</button>
 
       <div class="response-title">回答：</div>
       <div class="response-message" v-if="responseMessage">
@@ -602,6 +603,30 @@ const deleteDocumentById = async (): Promise<void> => {
   } catch (error) {
     console.error("删除知识库文档失败:", error.response?.data);
     responseMessage.value = "删除知识库文档失败";
+  }
+};
+
+const callMcpAgent = async (): Promise<void> => {
+  responseMessage.value = { answer: "" };
+  const { promise } = streamResponse(
+    `${axios.defaults.baseURL}/mcp-agent/run`,
+    { message: message.value },
+    {
+      onMessage: (chunk: any) => {
+        if (chunk.type === "chunk") {
+          responseMessage.value.answer += chunk.text;
+        }
+      },
+      onError: (error) => {
+        console.error("流式提问失败:", error);
+        responseMessage.value.answer = "提问失败，请检查模型服务是否正常";
+      },
+    },
+  );
+
+  try {
+    await promise;
+  } finally {
   }
 };
 
