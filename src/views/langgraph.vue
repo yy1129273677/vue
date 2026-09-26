@@ -2,9 +2,10 @@
   <div class="hello langgraph">
     <div class="section-container section4">
       <el-input class="textarea" type="textarea" v-model="message" :rows="8" @keyup.enter="sendChatBasic" placeholder="请输入您想问的问题" />
-      <el-button class="send-button" size="medium" type="primary" @click="sendChatBasic">无记忆提问</el-button>
-      <el-button class="send-button" size="medium" type="primary" @click="sendMemoryChatMemory">有记忆提问</el-button>
-      <el-button class="send-button" size="medium" type="primary" @click="queryHistory">查询历史</el-button>
+      <el-button class="send-button" type="primary" @click="sendChatBasic">无记忆提问</el-button>
+      <el-button class="send-button" type="primary" @click="sendMemoryChatMemory">有记忆提问</el-button>
+      <el-button class="send-button" type="primary" @click="queryHistory">查询历史</el-button>
+      <el-button class="send-button" type="primary" @click="articleSummaryProcess">文章摘要（流水线）</el-button>
       <div class="response-title">回答：</div>
       <div class="response-message" v-if="responseMessage">
         <div v-if="responseMessage.usage">您的token消耗：{{ responseMessage.usage }}</div>
@@ -122,6 +123,40 @@ const queryHistory = async (): Promise<void> => {
     historyMessage.value = res.data.result;
   } catch (error) {
     console.error('查询历史失败:', error);
+  }
+};
+
+const articleSummaryProcess = async (): Promise<void> => {
+  //   responseMessage.value = { answer: '' };
+  //   const { promise } = streamResponse(
+  //     `${axios.defaults.baseURL}/langgraph/article`,
+  //     { article: message.value },
+  //     {
+  //       onMessage: (chunk: any) => {
+  //         if (chunk.type === 'summary') {
+  //           responseMessage.value.answer += chunk.text;
+  //         }
+  //       },
+  //       onError: (error) => {
+  //         console.error('流式提问失败:', error);
+  //         responseMessage.value.answer = '提问失败，请检查模型服务是否正常';
+  //       },
+  //     },
+  //   );
+
+  //   try {
+  //     await promise;
+  //   } finally {
+  //     scrollToBottom();
+  //   }
+  responseMessage.value = { answer: '' };
+  try {
+    const res = await axios.post(`${axios.defaults.baseURL}/langgraph/article`, {
+      article: message.value,
+    });
+    responseMessage.value.answer = res.data.summary;
+  } catch (error) {
+    console.error('文章摘要处理失败:', error);
   }
 };
 </script>
