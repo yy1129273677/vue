@@ -103,7 +103,7 @@ import {
 
 import CopyButton from "@/components/CopyButton.vue";
 import MarkdownView from "@/components/MarkdownView.vue";
-import { usePlayground } from "@/stores/playground";
+import { usePlayground } from "@/core/engine";
 
 const store = usePlayground();
 

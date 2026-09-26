@@ -206,7 +206,7 @@ import { ElMessage } from "element-plus";
 import CopyButton from "@/components/CopyButton.vue";
 import MarkdownView from "@/components/MarkdownView.vue";
 import { baseURL } from "@/api/client";
-import { fetchHistory } from "@/api/langgraph";
+import { fetchHistory } from "@/modules/graph";
 import { streamRequest } from "@/api/stream";
 import { requestScrollToBottom } from "@/utils/scroll";
 
@@ -355,7 +355,7 @@ function stop() {
 
 /**
  * 查询当前 threadId 的历史消息。
- * 用的是 api/langgraph.ts 的 fetchHistory（axios 普通请求，不是流式）。
+ * 用的是 src/modules/graph 里的 fetchHistory（axios 普通请求，不是流式）。
  */
 async function loadHistory() {
   if (running.value) return;

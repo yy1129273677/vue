@@ -114,6 +114,9 @@ npm run dev
 
 ## 目录结构
 
+> 采用「**核心 + 模块**」结构：`core/` 管执行流程，`modules/` 管具体主题。
+> 新增功能只需要动 `src/modules/` 下的对应目录，详见 [docs/07-module-guide.md](./docs/07-module-guide.md)。
+
 ```
 demo1/
 ├── .env                      # 通用环境变量（应用名 / 版本 / 后端地址）
@@ -130,13 +133,27 @@ demo1/
 │   ├── 03-styling-and-theme.md   # 样式与主题
 │   ├── 04-how-to-extend.md       # 如何扩展
 │   ├── 05-troubleshooting.md     # 常见问题排查（含 404/500 接口自检）
-│   └── 06-code-reading-map.md    # 代码阅读地图（先读哪个文件）
+│   ├── 06-code-reading-map.md    # 代码阅读地图（先读哪个文件）
+│   └── 07-module-guide.md        # 模块开发指南（新增一个学习主题）
 ├── dist/                     # 构建产物（npm run build 生成）
 └── src/
     ├── main.ts               # 入口：路由 + Element Plus + 图标 + 错误兜底
     ├── App.vue               # 外壳：顶栏 / 侧边导航 / 主题切换 / 页脚
     ├── style.css             # 全局样式：设计令牌 + 深色主题 + Markdown 样式
     ├── vite-env.d.ts         # import.meta.env 类型声明
+    ├── core/                 # ★ 核心（一般不用改）
+    │   ├── types.ts          #   共享类型（FeatureItem / ModuleDefinition…）
+    │   ├── engine.ts         #   状态机与请求编排（所有按钮的统一入口）
+    │   ├── registry.ts       #   模块注册表（有哪些模块、按什么顺序展示）
+    │   └── inspect.ts        #   从模块推导接口清单（供接口自检页）
+    ├── modules/              # ★ 功能模块（新增功能都在这里）
+    │   ├── models/           #   基础对话      POST /models/*
+    │   ├── prompts/          #   提示词模板    POST /prompts/*
+    │   ├── chains/           #   链式调用      POST /chains/*
+    │   ├── agents/           #   智能体        POST /agents/*、/mcp-agent/*
+    │   ├── memory/           #   会话记忆      /memory/*
+    │   ├── rag/              #   RAG 知识库    /rag/*（含 api.ts + 专属逻辑）
+    │   └── graph/            #   LangGraph     /langgraph/*（独立页面）
     ├── router/
     │   ├── index.ts          # 路由表
     │   └── nav.ts            # 导航菜单数据
@@ -145,7 +162,7 @@ demo1/
     │   ├── Langchain.vue     # /langchain（渲染 Playground）
     │   ├── langgraph.vue     # /langgraph（记忆对话）
     │   ├── DocsView.vue      # /docs（阅读文档）
-    │   └── SelfCheck.vue     # /self-check（接口自检，排查 404/500）
+    │   └── SelfCheck.vue     # /self-check（接口自检）
     ├── components/
     │   ├── Playground.vue    # 演练场容器
     │   ├── PromptInput.vue   # 输入区
@@ -155,20 +172,16 @@ demo1/
     │   ├── MarkdownView.vue  # Markdown 渲染 + 代码复制
     │   ├── CopyButton.vue    # 通用复制按钮
     │   └── AppCard.vue       # 通用卡片外壳
-    ├── stores/
-    │   └── playground.ts     # 共享状态 + 请求编排（provide/inject）
-    ├── config/
-    │   └── features.ts       # 功能清单（页面按钮的数据源）
+    ├── config/features.ts    # 【兼容转发】已拆到 modules/，新代码别用
+    ├── stores/playground.ts  # 【兼容转发】已拆到 core/engine.ts
     ├── api/
     │   ├── client.ts         # axios 封装（baseURL / 超时 / 错误翻译）
-    │   ├── stream.ts         # SSE 流式请求封装
-    │   ├── langchain.ts      # LangChain 接口
-    │   ├── langgraph.ts      # LangGraph 接口
-    │   └── rag.ts            # RAG 接口 + RAG 功能配置
+    │   └── stream.ts         # SSE 流式请求封装
     ├── commJs/
     │   └── axios.ts          # axios 默认值与拦截器
     └── utils/
         ├── markdown.ts       # markdown-it 实例 + 轻量高亮
+        ├── scroll.ts         # 自动滚动（含「滚动条在文档上」的坑）
         └── clipboard.ts      # 复制到剪贴板（含降级）
 ```
 
@@ -515,3 +528,4 @@ ElMessage.success("操作成功");
 | [docs/04-how-to-extend.md](./docs/04-how-to-extend.md) | 加接口 / 加页面 / 加组件 / 换后端 |
 | [docs/05-troubleshooting.md](./docs/05-troubleshooting.md) | 常见问题排查与调试技巧 |
 | [docs/06-code-reading-map.md](./docs/06-code-reading-map.md) | **代码阅读地图**：先读哪个文件、每个文件能学到什么 |
+| [docs/07-module-guide.md](./docs/07-module-guide.md) | **模块开发指南**：新增一个学习主题的完整步骤 |

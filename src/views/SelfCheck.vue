@@ -2,25 +2,21 @@
   <!-- ======================================================================
        SelfCheck.vue —— 接口自检（排错用）
        ----------------------------------------------------------------------
-       【为什么需要它】
-         出现 404 / 500 时最费时间的，是不知道「哪个接口、什么原因」。
-         这一页把前端真正会调用的接口全部列出来，并提供两种检查方式：
+       【接口清单从哪来】
+         不手写！由 src/core/inspect.ts 从各模块的配置里自动推导
+         （src/modules/*/index.ts）。因此「改了模块 → 自检页自动跟着变」，
+         不会出现「模块改了、自检页还是旧的」这种骗人的情况。
 
-           ① 检查接口是否存在（不调用大模型）
-              用真实的 HTTP 方法发一个「空请求」探测：
-                · 404      → 后端没有这条路由（路径写错 / 后端没这个模块）
-                · 400/422  → 路由存在，只是参数校验没过（正是我们想要的结果）
-                · 405      → 路由存在，但方法不对（例如后端是 GET 你写了 POST）
-                · 2xx/3xx  → 路由存在且能跑通
-                · 5xx      → 路由存在，但后端处理时报错
-              空请求不会真正触发大模型，所以很快、也没有副作用。
-
-           ② 用示例参数真实调用（会调用大模型，慢且有副作用）
-              用来复现 500：如果是参数名/参数结构不对，这里会直接暴露出来。
+       【两种检查方式】
+         ① 检查接口是否存在（不调用大模型）
+            用真实 HTTP 方法发一个「空请求」：404 = 没有这条路由；
+            400/422 = 路由存在（只是参数校验没过，这正是我们想要的结果）。
+         ② 用示例参数真实调用（会调用大模型，慢且有副作用）
+            用来复现 500：参数名/结构不对会在这里暴露。
 
        【怎么读结果】
-         某行 404              → 前端路径与后端不一致 → 改 src/api/*.ts
-         路由存在但参数报错    → 参数名/结构不一致   → 改 config/features.ts 的 params
+         某行 404              → 前端路径与后端不一致 → 改对应模块文件
+         路由存在但参数报错    → 参数名/结构不一致     → 改模块配置里的 params
          两处都正常但仍失败    → 看「结果」列里后端返回的 message
        ====================================================================== -->
   <div class="self-check">
@@ -33,7 +29,7 @@
       <div class="self-check__intro">
         <h1>接口自检</h1>
         <p class="soft-label">
-          前端一共调用 <strong>{{ specs.length }}</strong> 个接口，下面逐个探测。
+          从 {{ modules.length }} 个模块自动汇总出 <strong>{{ specs.length }}</strong> 个接口。
           后端地址：<code class="mono">{{ apiBase }}</code>
         </p>
       </div>
@@ -56,7 +52,7 @@
       :closable="false"
       show-icon
       title="先点「① 检查接口是否存在」"
-      description="这一步发送空请求探测路由，不会真正调用大模型。若某行显示 404，说明前端写的路径后端没有，请对照后端 controller 修改 src/api/*.ts。"
+      description="这一步发送空请求探测路由，不会真正调用大模型。若某行显示 404，说明前端写的路径后端没有，请在对应的 src/modules/[主题]/index.ts 里修正。"
     />
 
     <!-- ---------- 进度 ---------- -->
@@ -98,7 +94,7 @@
     <!-- ---------- 明细表 ---------- -->
     <section class="surface table-wrap">
       <el-table :data="specs" size="small" style="width: 100%" row-key="key">
-        <el-table-column label="接口" min-width="190">
+        <el-table-column label="模块 / 功能" min-width="180">
           <template #default="{ row }">
             <div class="cell-api">
               <strong>{{ row.name }}</strong>
@@ -116,13 +112,13 @@
           </template>
         </el-table-column>
 
-        <el-table-column label="前端发送的参数" min-width="210">
+        <el-table-column label="前端发送的参数" min-width="200">
           <template #default="{ row }">
             <code class="mono params">{{ formatParams(row) }}</code>
           </template>
         </el-table-column>
 
-        <el-table-column label="检查结果" min-width="320">
+        <el-table-column label="检查结果" min-width="300">
           <template #default="{ row }">
             <!-- 注意：results 是对象，不能用 results.length 判断「有没有结果」，
                  必须用单独的布尔量 hasResults；每一行再各自判断自己的结果。 -->
@@ -145,8 +141,9 @@
     </section>
 
     <p class="soft-label">
-      说明：本页只做「诊断」，不会修复数据。看到 404 请把该行路径与后端 controller 对照；
-      看到 5xx 请点「② 示例参数真实调用」，把后端返回的 message 发出来定位。
+      说明：本页只做「诊断」，不会修复数据。看到 404 请对照后端 controller 检查
+      src/modules/ 下对应模块的 path；看到 5xx 请点「② 示例参数真实调用」，
+      把后端返回的 message 发出来定位。
     </p>
   </div>
 </template>
@@ -154,257 +151,27 @@
 <script setup lang="ts">
 /**
  * 【本文件的实现要点】
- *   1. 直接用 axios 而不是 api/client.ts 的封装 —— 封装会把错误翻译成中文文案并抛出，
- *      而这里需要拿到**原始状态码**做判断。
+ *   1. 接口清单由 core/inspect.ts 从模块配置推导，不手写（避免与真实配置不一致）。
+ *   2. 直接用 axios 而不是 api/client.ts 的封装 —— 封装会把错误翻译成中文文案并抛出，
+ *      而这里需要拿到**原始状态码**。
  *      `validateStatus: () => true` 让所有状态码都走成功分支，不抛异常。
- *   2. 顺序执行、每项之间稍作停顿，避免瞬间并发把后端打满。
- *   3. 「检查存在」用真实方法 + 空参数：NestJS 的参数校验会立刻返回 400/422，
- *      这样既不触发大模型，又能证明「路由 + 方法」是对的。
+ *   3. 顺序执行、每项之间稍作停顿，避免瞬间并发把后端打满。
  */
 import { computed, reactive, ref } from "vue";
 import { Connection, Delete, Promotion, Search } from "@element-plus/icons-vue";
 
 import axios from "@/commJs/axios";
 import { baseURL } from "@/api/client";
+import { modules, getFeatureGroups } from "@/core/registry";
+import { deriveEndpointSpecs, type EndpointSpec } from "@/core/inspect";
 
 const apiBase = baseURL();
 
-/* ====================================================================== *
- * 第 1 节：接口清单（与 config/features.ts、api/*.ts 一一对应）
- * ====================================================================== */
-
-interface EndpointSpec {
-  /** 表格行 key（唯一） */
-  key: string;
-  group: string;
-  name: string;
-  /** 后端真实方法 */
-  method: "GET" | "POST" | "DELETE";
-  path: string;
-  /** GET 接口的查询参数 */
-  query?: Record<string, any>;
-  /** POST 接口的示例请求体（与页面上 params 生成的完全一致） */
-  body?: Record<string, any>;
-  /** 备注：例如「流式接口」 */
-  note?: string;
-}
-
-const specs: EndpointSpec[] = [
-  /* ---- models 基础对话 ---- */
-  {
-    key: "chat-basic",
-    group: "基础对话",
-    name: "基础提问",
-    method: "POST",
-    path: "/models/chat",
-    body: { message: "ping" },
-  },
-  {
-    key: "chat-system",
-    group: "基础对话",
-    name: "专业提问",
-    method: "POST",
-    path: "/models/chat-system",
-    body: {
-      system: "你是一个专业的前端工程师，请用简洁的语言解释技术概念，不超过5句话",
-      message: "ping",
-    },
-  },
-  {
-    key: "chat-parser",
-    group: "基础对话",
-    name: "链式提问",
-    method: "POST",
-    path: "/models/chat-parser",
-    body: { message: "ping" },
-  },
-  {
-    key: "chat-stream",
-    group: "基础对话",
-    name: "流式输出",
-    method: "POST",
-    path: "/models/chat-stream",
-    body: { message: "ping" },
-    note: "流式接口（页面用 fetch+SSE 调用，这里用 axios 仅验证路由）",
-  },
-
-  /* ---- prompts 提示词 ---- */
-  {
-    key: "prompt-translate",
-    group: "提示词模板",
-    name: "翻译为英文",
-    method: "POST",
-    path: "/prompts/translate",
-    body: { text: "ping", targetLang: "英文" },
-  },
-  {
-    key: "prompt-sentiment",
-    group: "提示词模板",
-    name: "情感判定",
-    method: "POST",
-    path: "/prompts/classify",
-    body: { text: "ping" },
-  },
-  {
-    key: "prompt-code-review",
-    group: "提示词模板",
-    name: "代码审查",
-    method: "POST",
-    path: "/prompts/code-review",
-    body: { code: "const a = 1", language: "javascript" },
-  },
-
-  /* ---- chains 链式调用 ---- */
-  {
-    key: "chain-polish",
-    group: "链式调用",
-    name: "文章润色",
-    method: "POST",
-    path: "/chains/polish",
-    body: { article: "ping" },
-    note: "流式接口",
-  },
-  {
-    key: "chain-blog",
-    group: "链式调用",
-    name: "生成博客",
-    method: "POST",
-    path: "/chains/blog",
-    body: { keywords: "ping", style: "前端技术" },
-    note: "流式接口",
-  },
-  {
-    key: "chain-router",
-    group: "链式调用",
-    name: "智能路由",
-    method: "POST",
-    path: "/chains/router",
-    body: { question: "ping" },
-    note: "流式接口",
-  },
-
-  /* ---- agents 智能体 ---- */
-  {
-    key: "agent-run",
-    group: "智能体",
-    name: "Agent 回答",
-    method: "POST",
-    path: "/agents/run",
-    body: { message: "ping", sessionId: "yy" },
-    note: "流式接口",
-  },
-  {
-    key: "agent-mcp",
-    group: "智能体",
-    name: "MCP 回答",
-    method: "POST",
-    path: "/mcp-agent/run",
-    body: { message: "ping" },
-    note: "流式接口",
-  },
-
-  /* ---- memory 会话记忆 ---- */
-  {
-    key: "memory-chat",
-    group: "会话记忆",
-    name: "上下文回答",
-    method: "POST",
-    path: "/memory/chat",
-    body: { sessionId: "yy", message: "ping" },
-  },
-  {
-    key: "memory-chat-stream",
-    group: "会话记忆",
-    name: "上下文回答（流式）",
-    method: "POST",
-    path: "/memory/chat-stream",
-    body: { sessionId: "yy", message: "ping" },
-    note: "流式接口",
-  },
-  {
-    key: "memory-history",
-    group: "会话记忆",
-    name: "查询会话历史",
-    method: "GET",
-    path: "/memory/chat-history",
-    query: { sessionId: "yy" },
-  },
-
-  /* ---- rag 知识库 ---- */
-  {
-    key: "rag-load",
-    group: "RAG 知识库",
-    name: "文本入库",
-    method: "POST",
-    path: "/rag/load",
-    body: {
-      documents: [{ id: "check-1", content: "自检示例文档", source: "self-check" }],
-    },
-  },
-  {
-    key: "rag-search",
-    group: "RAG 知识库",
-    name: "向量检索",
-    method: "POST",
-    path: "/rag/search",
-    body: { query: "ping" },
-  },
-  {
-    key: "rag-query",
-    group: "RAG 知识库",
-    name: "RAG 检索问答",
-    method: "POST",
-    path: "/rag/query",
-    body: { question: "ping" },
-    note: "流式接口",
-  },
-  {
-    key: "rag-list",
-    group: "RAG 知识库",
-    name: "查询知识库文档",
-    method: "GET",
-    path: "/rag/listDocuments",
-  },
-  {
-    key: "rag-delete",
-    group: "RAG 知识库",
-    name: "删除知识库文档",
-    method: "DELETE",
-    path: "/rag/deleteDocumentById/:id",
-    note: "id 在 URL 路径里；探测时用示例 id：self-check-id",
-  },
-
-  /* ---- langgraph ---- */
-  {
-    key: "graph-simple",
-    group: "LangGraph",
-    name: "无记忆对话",
-    method: "POST",
-    path: "/langgraph/simple-chat",
-    body: { message: "ping" },
-    note: "流式接口",
-  },
-  {
-    key: "graph-memory",
-    group: "LangGraph",
-    name: "有记忆对话",
-    method: "POST",
-    path: "/langgraph/memory-chat",
-    body: { message: "ping", threadId: "yy" },
-    note: "流式接口",
-  },
-  {
-    key: "graph-history",
-    group: "LangGraph",
-    name: "会话历史",
-    method: "GET",
-    path: "/langgraph/history",
-    query: { threadId: "yy" },
-  },
-];
+/** 接口清单：从模块配置自动推导（含 LangGraph 等独立页面的接口） */
+const specs: EndpointSpec[] = deriveEndpointSpecs(getFeatureGroups(), modules);
 
 /* ====================================================================== *
- * 第 2 节：状态与结果判定
+ * 状态与结果判定
  * ====================================================================== */
 
 interface ProbeResult {
@@ -426,8 +193,7 @@ interface ProbeResult {
 
 /**
  * 检查结果：key → 结果。
- * 用 reactive 对象便于按 key 取值；注意它是**对象**，
- * 判断「有没有结果」要用 hasResults，而不是 results.length。
+ * 注意它是**对象**：判断「有没有结果」要用 hasResults，而不是 results.length。
  */
 const results = reactive<Record<string, ProbeResult>>({});
 /** 已完成数量（驱动进度条与 hasResults） */
@@ -456,7 +222,6 @@ const summary = computed(() => {
 /**
  * 推断「后端是否挂在 /api 前缀下」：
  * 有请求是加了 /api 才通的，且没有任何一条直连就通。
- * 若成立，说明该去 .env 把 VITE_API_BASE 改成 http://host:3001/api。
  */
 const apiPrefixHint = computed(() => {
   const list = Object.values(results);
@@ -473,7 +238,7 @@ function isPlainObject(value: unknown): value is Record<string, any> {
 /** 把「前端实际发送的参数」格式化成一行文字，方便与后端 DTO 对照 */
 function formatParams(spec: EndpointSpec): string {
   if (spec.method === "GET") {
-    return spec.query
+    return spec.query && Object.keys(spec.query).length > 0
       ? new URLSearchParams(spec.query as Record<string, string>).toString()
       : "（无参数）";
   }
@@ -554,7 +319,7 @@ function interpret(
       critical: true,
       warn: false,
       requestSummary,
-      note: `后端没有 ${spec.method} ${spec.path}，请对照后端 controller 修改 src/api/*.ts`,
+      note: `后端没有 ${spec.method} ${spec.path}，请对照后端 controller 检查对应模块的 path`,
     };
   }
 
@@ -600,7 +365,7 @@ function pickMessage(data: any): string | undefined {
 }
 
 /* ====================================================================== *
- * 第 3 节：探测与两种检查方式
+ * 探测与两种检查方式
  * ====================================================================== */
 
 /**
@@ -621,7 +386,7 @@ async function probe(spec: EndpointSpec, prefix: string, withParams: boolean) {
 
   if (!withParams) {
     // 只探测路由：真实方法 + 空请求体。
-    // POST 传 {} → 后端参数校验返回 400/422；GET 直接请求；都不会触发大模型。
+    // POST 传 {} → 后端参数校验返回 400/422；GET/DELETE 直接请求；都不会触发大模型。
     return axios.request({
       ...common,
       method: spec.method,
@@ -640,10 +405,8 @@ async function probe(spec: EndpointSpec, prefix: string, withParams: boolean) {
 }
 
 /**
- * 带前缀回退的探测：
- * 先直连；如果 404，再试一次 `${baseURL}/api/...`。
- * 很多 NestJS 项目用 app.setGlobalPrefix('api')，此时正确地址是 /api/xxx，
- * 这一步能自动发现并在页面上提示。
+ * 带前缀回退的探测：先直连；若 404，再试一次 `${baseURL}/api/...`。
+ * 很多 NestJS 项目用 app.setGlobalPrefix('api')，这一步能自动发现并提示。
  */
 async function probeWithFallback(spec: EndpointSpec, withParams: boolean) {
   const direct = await probe(spec, "", withParams);

@@ -102,7 +102,7 @@ import { ChatLineSquare, Delete } from "@element-plus/icons-vue";
 
 import CopyButton from "@/components/CopyButton.vue";
 import MarkdownView from "@/components/MarkdownView.vue";
-import type { HistoryItem } from "@/stores/playground";
+import type { HistoryItem } from "@/core/types";
 
 defineProps<{ items: HistoryItem[] }>();
 defineEmits<{ clear: [] }>();

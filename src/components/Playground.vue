@@ -24,10 +24,10 @@
       </span>
       <div>
         <h1>LangChain 功能演练场</h1>
-        <!-- total 是 computed，功能数量变化时会自动更新 -->
+        <!-- total 是计算出来的功能总数（见 script 部分） -->
         <p class="soft-label">
           共 {{ total }} 个练习接口，覆盖「对话 → 提示词 → 链 → 智能体 → 记忆 →
-          RAG」六个主题。 每个按钮的说明请把鼠标悬停在按钮上查看。
+          RAG」六个主题。每个按钮的说明请把鼠标悬停在按钮上查看。
         </p>
       </div>
       <div class="playground__head-tools">
@@ -73,56 +73,53 @@ import AnswerCard from "@/components/AnswerCard.vue";
 import FeaturePanel from "@/components/FeaturePanel.vue";
 import HistoryList from "@/components/HistoryList.vue";
 import PromptInput from "@/components/PromptInput.vue";
-import { createRagGroup } from "@/api/rag";
-import { featureGroups } from "@/config/features";
-import { providePlayground } from "@/stores/playground";
+import { providePlayground } from "@/core/engine";
+import { modules, getFeatureGroups, setHistorySink } from "@/core/registry";
 
 /**
- * 创建并「提供」共享状态。
+ * 创建并「提供」共享状态（modules 告诉引擎有哪些功能模块）。
  *
  * 【provide / inject 的执行顺序】
  *   父组件的 setup 会先于子组件执行，所以这里 provide 出来的状态，
- *   在下面几个子组件 setup 时就能被 inject 到（见 PromptInput / FeaturePanel /
+ *   在后面几个子组件 setup 时就能被 inject 到（见 PromptInput / FeaturePanel /
  *   AnswerCard 里的 usePlayground()）。
  *
  * 【为什么必须写在组件 setup 顶层】
  *   provide / inject 依赖「当前组件实例」这个隐式上下文，
  *   写在回调或异步代码里会拿不到实例而报错。
  */
-const store = providePlayground();
+const store = providePlayground(modules);
 
 /**
- * 组装要渲染的分组列表。
+ * 把「写会话历史」的能力交给模块（见 core/registry.ts 的 setHistorySink）。
+ * RAG 模块的「向量检索」「RAG 问答」就是靠它把结果写进下方历史列表的；
+ * 模块自身不需要 import 引擎，避免循环依赖。
+ * 必须在 getFeatureGroups() 之前调用。
+ */
+setHistorySink(store.setHistory);
+
+/**
+ * 页面上的所有分组，来自各模块（src/modules/*），这里只负责汇总。
+ * 分组是静态展示数据、不依赖响应式状态，取一次即可（registry 内部会缓存）。
  *
- * RAG 那一组比较特殊：它的配置需要「写历史列表」的方法（store.setHistory），
- * 所以在这里现场创建，不属于 config/features.ts 里的静态数据。
- * 只创建一次（没有放进 computed 里反复创建）——createRagGroup 返回的是配置数据，
- * 与响应式无关，没必要重复生成。
+ * 想增删功能 → 去对应模块文件改，本组件不需要动。
  */
-const ragGroup = createRagGroup(store.setHistory);
+const groups = getFeatureGroups();
 
-/**
- * 所有分组 = 静态配置 + RAG 分组。
- * 用 computed 是为了让 total 与模板都能复用同一份计算结果；
- * concat 返回新数组，避免直接 push 改动导入进来的静态配置。
- */
-const groups = computed(() => featureGroups.concat(ragGroup));
-
-/** 功能总数：用于头部文案（reduce 把每组的数量累加起来） */
+/** 功能总数：用于头部文案 */
 const total = computed(() =>
-  groups.value.reduce((sum, group) => sum + group.features.length, 0),
+  groups.reduce((sum, group) => sum + group.features.length, 0),
 );
 
 /**
  * 「刷新历史」按钮的处理函数。
- * 做法是复用一个已存在的功能配置（memory 分组里的「查询会话历史」），
- * 直接交给统一的 runFeature 执行 —— 这样不必再为它写一遍请求逻辑。
+ * 从分组里找到「查询会话历史」这条配置，交给统一入口执行 ——
+ * 不必为它再写一遍请求逻辑。
  */
 async function refreshHistory() {
-  const memoryGroup = featureGroups.find((group) => group.key === "memory");
-  const feature = memoryGroup?.features.find(
-    (item) => item.id === "memory-history",
-  );
+  const feature = groups
+    .flatMap((group) => group.features)
+    .find((item) => item.id === "memory-history");
 
   if (feature) await store.runFeature(feature);
   else ElMessage.warning("未找到会话历史功能配置");

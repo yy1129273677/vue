@@ -127,8 +127,8 @@ npm i -D typescript@~5.9.0
 | --- | --- | --- |
 | `HTTP 200/201` | 路由存在且能跑通 | ✅ 正常 |
 | `HTTP 405` | 路由存在，只是不允许探测方法 | ✅ 视为正常 |
-| `HTTP 404` | **后端没有这条路由** | 路径不一致：核对后端 controller，改 `src/api/*.ts` |
-| `HTTP 400/422` | 路由存在，参数名/结构不对 | 核对后端 DTO，改 `src/config/features.ts` 的 `params` |
+| `HTTP 404` | **后端没有这条路由** | 路径不一致：核对后端 controller，改对应模块 `src/modules/<主题>/index.ts` 的 `path` |
+| `HTTP 400/422` | 路由存在，参数名/结构不对 | 核对后端 DTO，改对应模块配置里的 `params` |
 | `HTTP 500` | **路由存在，但后端执行报错** | 后端问题（Ollama 未启动 / 模型名不对等），看后端终端日志 |
 | `连不上后端` | 后端没启动或地址写错 | 启动后端，或改 `.env` 的 `VITE_API_BASE` |
 
@@ -151,7 +151,8 @@ VITE_API_BASE=http://localhost:3001/api
 说明这些功能是后来才加进演示页的，后端还没实现对应路由。二选一：
 
 - 在后端补上这些 controller；
-- 或把 `src/config/features.ts` 里对应那条配置注释掉（页面按钮就会消失）。
+- 或把对应模块里那条配置注释掉（页面按钮就会消失），
+  例如 `/mcp-agent/run` 在 `src/modules/agents/index.ts`。
 
 ### 7.3 接口 500：先看后端终端
 
@@ -265,7 +266,7 @@ decoder.decode(value, { stream: true });  // 必须带 stream: true
 调整：
 
 ```ts
-// stores/playground.ts → startStream 里
+// src/core/engine.ts → startStream 里
 streamRequest(url, data, handlers, { idleTimeout: 120_000 });  // 改成 2 分钟
 ```
 
@@ -349,10 +350,12 @@ console.log(el.scrollHeight, el.clientHeight);
 
 ### 21. 新增的功能按钮不显示
 
-检查 `src/config/features.ts`：
+检查对应模块文件（`src/modules/<主题>/index.ts`）：
 
-- 是否加在了某个 `featureGroups` 的 `features` 数组里（不是数组外面）；
+- 是否加在了某个分组的 `features` 数组里（不是数组外面）；
+- 新模块有没有在 `src/core/registry.ts` 的 `modules` 数组里注册；
 - `call` 字段是否漏写（没有 `call` 会提示「还没有绑定接口」）；
+- `id` 是否和已有功能重复；
 - dev 服务器有没有热更新成功（看终端有没有报错）。
 
 ### 22. `npm run build` 报类型错误

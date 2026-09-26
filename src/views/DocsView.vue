@@ -118,6 +118,7 @@ const docList: DocMeta[] = [
   { id: "04-how-to-extend", title: "如何扩展", summary: "加接口、加页面、加组件", file: "docs/04-how-to-extend.md" },
   { id: "05-troubleshooting", title: "常见问题", summary: "连不上后端、样式不生效…", file: "docs/05-troubleshooting.md" },
   { id: "06-code-reading-map", title: "代码阅读地图", summary: "先读哪个文件、能学到什么", file: "docs/06-code-reading-map.md" },
+  { id: "07-module-guide", title: "模块开发指南", summary: "新增一个学习主题的完整步骤", file: "docs/07-module-guide.md" },
 ];
 
 /** 当前打开的文档 id（默认「从零上手」，因为新手最该先看它） */

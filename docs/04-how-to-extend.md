@@ -1,45 +1,39 @@
 # 如何扩展（How to Extend）
 
-> 这一节是「照着抄就能用」的说明书，四个最常见的扩展场景：
-> 加一个接口按钮、加一个新页面、加一个新组件、换成真实后端/按需引入 Element Plus。
+> 这一节是「照着抄就能用」的说明书。四种最常见的扩展场景：
+> 加一个接口按钮、加一个新页面、加一个新组件、对接自己的后端。
+>
+> ⚠️ 项目采用「**核心 + 模块**」结构：新增功能请改 `src/modules/<主题>/index.ts`，
+> **不要**去改 `core/engine.ts`（执行流程）或组件（只负责渲染）。
+> 想新增一个完整主题（而不只是加个按钮）请看 [07-module-guide.md](./07-module-guide.md)。
 
-## 场景一：加一个接口按钮（最常见，2 分钟）
+## 场景一：给已有主题加一个接口按钮（最常见，2 分钟）
 
 假设后端新加了一个接口 `POST /models/summarize`（文本摘要）。
 
-### 第 1 步：在 `src/api/langchain.ts` 里加函数
+### 打开对应模块：`src/modules/models/index.ts`
 
-```ts
-/** 文本摘要 */
-export function summarize(text: string) {
-  return post("/models/summarize", { text });
-}
-```
-
-再把它加进文件末尾的 `langchainApi` 汇总对象（可选，方便按对象调用）。
-
-### 第 2 步：在 `src/config/features.ts` 里加一条配置
-
-找到合适的 `featureGroups` 分组（这里放 models 组），在 `features` 数组里加一项：
+在 `groups[0].features` 数组里加一条（不需要新建文件、不需要写请求函数）：
 
 ```ts
 {
   id: "chat-summarize",              // 唯一 id，用于按钮 loading 状态
   label: "文本摘要",                  // 按钮文字
-  icon: "Notebook",                  // Element Plus 图标组件名
+  icon: "Notebook",                  // Element Plus 图标组件名（已全局注册）
   description: "把长文本压缩成三句话摘要",
-  endpoint: "POST /models/summarize",
+  endpoint: "POST /models/summarize", // 仅供展示与对照后端
   color: "primary",
   sample: "在这里放一段测试用的长文本……",
   call: {
-    path: "/models/summarize",
+    path: "/models/summarize",       // 真实请求路径
+    method: "POST",                  // 不写默认 POST；GET/DELETE 必须显式写
     params: (ctx) => ({ text: ctx.message }),
     pick: (data) => String(data?.summary ?? ""),   // 从响应里取要展示的字段
   },
 },
 ```
 
-保存，浏览器立刻出现新按钮。**页面代码一行都不用改。**
+保存，浏览器立刻出现新按钮。**引擎、组件、注册表都不用改。**
 
 ### 常见 call 写法对照
 
@@ -48,15 +42,15 @@ export function summarize(text: string) {
 | 返回 `{ answer: "..." }` | `call: { path, params }`（默认会自动取 `answer`） |
 | 返回自定义字段 | 加 `pick: (data) => String(data.summary)` |
 | 是流式接口 | `call: { stream: true, path }` |
-| 返回的是历史/列表 | `call: { path, action: "history" }` |
-| 结构很特殊 | `call: { handler: async (ctx) => { ... } }`，参考 `src/api/rag.ts` |
+| 返回的是历史/列表 | `call: { path, method: "GET", action: "history" }` |
+| 结构很特殊 / 要调多个接口 | `call: { handler: async (ctx) => { ... } }`，参考 `src/modules/rag/index.ts` |
 
 ### 需要输入框内容校验
 
 默认所有功能都要求输入框非空。如果是纯查询接口：
 
 ```ts
-{ id: "xxx", label: "查询全部", needsInput: false, call: { path: "/xxx/list", action: "history" } }
+{ id: "xxx", label: "查询全部", needsInput: false, call: { path: "/xxx/list", method: "GET", action: "history" } }
 ```
 
 ## 场景二：加一个新页面（5 分钟）
@@ -190,24 +184,31 @@ VITE_API_BASE=http://192.168.1.100:3001
 
 两种情况：
 
-**A. 只是取值的字段名不同** → 在 `config/features.ts` 里用 `pick`：
+**A. 只是取值的字段名不同** → 在模块配置里用 `pick`：
 
 ```ts
 call: {
   path: "/my/api",
+  method: "POST",
   params: (ctx) => ({ question: ctx.message }),
   pick: (data) => String(data.data.content),   // 逐层取
 }
 ```
 
-**B. 返回结构完全不同** → 用 `handler` 自己处理，参考 `src/api/rag.ts`：
+**B. 返回结构完全不同** → 用 `handler` 自己处理，参考 `src/modules/rag/index.ts`：
 
 ```ts
 call: {
   handler: async (ctx) => {
-    // 第二个参数是 HTTP 方法（默认 POST；GET 时第三个参数会变成查询参数）
+    // ctx.requestJson(路径, 方法, 参数)：
+    //   方法默认 POST；GET / DELETE 时第三个参数是查询参数，POST 时是请求体
     const data = await ctx.requestJson("/my/api", "GET", { q: ctx.message });
-    const store = ???   // 需要写历史/回答时，见下方说明
+
+    // 想把结果写进页面：
+    //   · 回答区 → 不能用 ctx（它没有这个能力），改用模块的 handler 返回值？
+    //     不 —— 正确做法是把结果交给 groups 里闭包持有的 setHistory（写历史列表），
+    //     或者干脆用最简单的普通请求分支（引擎会自动写回答区）。
+    moduleCtx.setHistory([{ role: "assistant", content: String(data?.content ?? "") }]);
   },
 }
 ```
@@ -216,8 +217,9 @@ call: {
 > `call` 里也必须写 `method: "GET"`，否则会发成 POST → 后端匹配不到路由 → 404。
 > `params` 在 GET 时会作为**查询参数**拼在 URL 上，在 POST 时才是**请求体**。
 
-> `handler` 里如果想写「会话历史」，需要在创建分组时把 `setHistory` 传进来
-> （`createRagGroup(setHistory)` 就是这个套路，见 `src/api/rag.ts`）。
+> `handler` 里想写「会话历史」，需要拿到 `setHistory` ——
+> 把 `groups` 写成函数即可（`groups: (moduleCtx) => { const setHistory = moduleCtx.setHistory; ... }`），
+> `src/modules/rag/index.ts` 就是这么做的，可以直接对照。
 
 ### 4.3 流式格式不一样怎么办
 

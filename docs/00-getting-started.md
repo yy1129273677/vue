@@ -11,8 +11,8 @@
 
 ```
 点按钮
-  → src/config/features.ts 里的配置告诉页面「调哪个接口」
-  → src/api/langchain.ts 里的函数发起请求（axios 或 fetch）
+  → src/modules/<主题>/index.ts 里的配置告诉页面「调哪个接口」
+  → core/engine.ts 统一发起请求（axios 或 fetch）
   → 后端 NestJS（默认 http://localhost:3001）组织提示词、调用 Ollama
   → 前端把返回的 Markdown 用 markdown-it 渲染成 HTML 显示出来
 ```

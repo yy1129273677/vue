@@ -5,18 +5,19 @@
 ```
 组件（.vue）
    ↓ 只调用 store，不直接发请求
-stores/playground.ts         统一编排：loading、错误、结果落位
+core/engine.ts               统一编排：loading、错误、结果落位
    ↓
-config/features.ts           描述「这个按钮调哪个接口、怎么展示」
+modules/<主题>/index.ts      描述「这个按钮调哪个接口、怎么展示」
    ↓
-api/langchain.ts → api/client.ts (axios)  /  api/stream.ts (fetch+SSE)
+api/*.ts（模块内）→ api/client.ts (axios)  /  api/stream.ts (fetch+SSE)
 ```
 
 好处：
 
-- 后端改路由 → 只改 `api/*.ts`；
-- 想加一个按钮 → 只改 `config/features.ts`；
-- 想改 loading / 错误提示规则 → 只改 `stores/playground.ts`。
+- 后端改路由 → 只改对应模块；
+- 想加一个按钮 → 只改对应模块的配置（`src/modules/<主题>/index.ts`）；
+- 想改 loading / 错误提示规则 → 只改 `src/core/engine.ts`；
+- 想加一个新主题 → 新建模块 + 在 `src/core/registry.ts` 注册一行。
 
 ## 2. 普通请求（axios）
 
@@ -192,7 +193,7 @@ cancel();        // 用户点「停止输出」时调用
 关键是**不要等结果**，而是每来一片就更新响应式数据：
 
 ```ts
-// stores/playground.ts
+// core/engine.ts
 onMessage: (chunk) => {
   const answer = result.value?.answer ?? "";
   result.value = { ...result.value, answer: answer + chunk.text };
@@ -231,7 +232,7 @@ RAG 问答的流里混着两类数据：
 {"type":"source","text":[{"content":"…"}]} // 引用来源
 ```
 
-所以 `src/api/rag.ts` 里用了自定义的 `streamHandler`：
+所以 `src/modules/rag/` 里用了自定义的 `streamHandler`：
 正文交给 store 自动追加，来源写进「会话历史」区展示。
 
 ## 4. 接口清单（前端已接入的）

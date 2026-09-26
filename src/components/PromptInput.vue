@@ -134,7 +134,7 @@ import {
 } from "@element-plus/icons-vue";
 
 import CopyButton from "@/components/CopyButton.vue";
-import { usePlayground } from "@/stores/playground";
+import { usePlayground } from "@/core/engine";
 
 /** 取出页面共享状态（由 Playground.vue 通过 provide 提供） */
 const store = usePlayground();

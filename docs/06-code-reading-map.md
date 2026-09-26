@@ -5,6 +5,9 @@
 
 ## 一、推荐阅读顺序（约 40 分钟）
 
+> 代码分三层：**core（核心）→ modules（主题）→ components（展示）**。
+> 先读 core 认识「执行流程」，再挑一个 module 看「功能怎么配」，最后看组件怎么渲染。
+
 | 顺序 | 文件 | 你会搞懂 |
 | --- | --- | --- |
 | 1 | `index.html` | 应用的起点：Vite 从这里加载 `/src/main.ts` |
@@ -12,13 +15,15 @@
 | 3 | `src/router/index.ts` + `src/router/nav.ts` | URL 怎么对应到页面；菜单数据从哪来 |
 | 4 | `src/App.vue` | 页面外壳：顶栏 / 侧边导航 / `<router-view>` / 主题切换 |
 | 5 | `src/views/Langchain.vue` → `src/components/Playground.vue` | 一个页面是怎么拼出来的（容器组件） |
-| 6 | `src/config/features.ts` | **功能清单**：所有按钮的数据源，注释里逐字段解释 |
-| 7 | `src/stores/playground.ts` | **核心**：共享状态 + 请求编排（provide/inject、ref、computed） |
-| 8 | `src/api/client.ts` → `src/api/stream.ts` | 请求怎么发；**流式输出（SSE）原理** |
-| 9 | `src/api/rag.ts` | RAG 三步走；`handler` 自定义逻辑的写法 |
-| 10 | `src/views/langgraph.vue` | 另一种写法：不依赖 store，一个页面自成闭环 |
-| 11 | `src/views/SelfCheck.vue` | 实用工具页：如何用 `validateStatus` 拿到原始状态码做接口诊断 |
-| 12 | `src/style.css` + 任意 `components/*.vue` | 设计令牌、深色主题、卡片与响应式 |
+| 6 | `src/core/types.ts` | **数据结构**：FeatureItem / FeatureCall / ModuleDefinition |
+| 7 | `src/core/engine.ts` | **核心**：共享状态 + 请求编排（provide/inject、ref、computed） |
+| 8 | `src/core/registry.ts` | 有哪些模块、顺序如何、能力怎么注入给模块 |
+| 9 | `src/modules/models/index.ts` | **最简单的模块**：4 个功能，含普通请求与流式 |
+| 10 | `src/modules/rag/index.ts` + `api.ts` | 进阶模块：handler 自定义逻辑、引用来源、依赖注入 |
+| 11 | `src/api/client.ts` → `src/api/stream.ts` | 请求怎么发；**流式输出（SSE）原理** |
+| 12 | `src/views/langgraph.vue` | 另一种写法：不依赖引擎，一个页面自成闭环 |
+| 13 | `src/views/SelfCheck.vue` + `src/core/inspect.ts` | 工具页：如何从配置反推接口清单做诊断 |
+| 14 | `src/style.css` + 任意 `components/*.vue` | 设计令牌、深色主题、卡片与响应式 |
 
 读完这一圈，你就掌握了这个项目的全部结构。
 
@@ -27,8 +32,8 @@
 | 想学的东西 | 去看 | 关键注释位置 |
 | --- | --- | --- |
 | Vue 3 `<script setup>` | 任意 `.vue` | 各文件 `<script setup>` 顶部 |
-| `ref` / `computed` 的区别 | `stores/playground.ts` | 文件头「三个 Vue 概念」+ 3.1/3.2 节 |
-| provide / inject 状态共享 | `stores/playground.ts` | 文件头 + 第 4 节 |
+| `ref` / `computed` 的区别 | `src/core/engine.ts` | 文件头「三个 Vue 概念」+ 3.1/3.2 节 |
+| provide / inject 状态共享 | `src/core/engine.ts` | 文件头 + 第 4 节 |
 | 组件通信（props / emit / 插槽） | `components/HistoryList.vue`（props+emit）、`components/AppCard.vue`（插槽） | 各文件头部说明 |
 | `v-model` 双向绑定 | `components/PromptInput.vue` | 模板里输入框那段 |
 | `v-html` + Markdown 渲染 | `components/MarkdownView.vue`、`utils/markdown.ts` | 文件头「三步走」 |
@@ -38,9 +43,11 @@
 | axios 封装与错误翻译 | `api/client.ts` | 文件头 + `toMessage` |
 | 拦截器 | `commJs/axios.ts` | 文件内两段拦截器注释 |
 | **SSE 流式输出** | `api/stream.ts` | 文件头 + 「难点一/二/三」注释 |
-| 打字机效果怎么来的 | `stores/playground.ts` | `startStream` 里 `onMessage` 注释 |
-| 取消请求（停止输出） | `api/stream.ts` + `stores/playground.ts` | `cancel` 与 `stopStreaming` |
-| 配置驱动 UI | `config/features.ts` + `components/FeaturePanel.vue` | 文件头「六种调用方式」 |
+| 打字机效果怎么来的 | `src/core/engine.ts` | `startStream` 里 `onMessage` 注释 |
+| 取消请求（停止输出） | `api/stream.ts` + `src/core/engine.ts` | `cancel` 与 `stopStreaming` |
+| **配置驱动 UI** | `src/core/types.ts` + `src/modules/models/index.ts` + `components/FeaturePanel.vue` | 文件头「六种调用方式」 |
+| **模块化架构** | `src/core/registry.ts` + `docs/07-module-guide.md` | 注册表文件头 |
+| 依赖注入（模块拿 setHistory） | `src/modules/rag/index.ts` | `groups: (moduleCtx) => ...` 注释 |
 | 惰性求值（props 传函数） | `components/CopyButton.vue` | `text` prop 注释 |
 | 自动滚动到底部（含踩坑） | `utils/scroll.ts` | 文件头「滚动条不一定长在你以为的元素上」 |
 | CSS 变量 / 设计令牌 | `style.css`（第 1 节）+ `components/AppCard.vue` | 文件头「局部 CSS 变量」 |
@@ -55,11 +62,12 @@
 ```
 用户点按钮
   └─ components/FeaturePanel.vue     @click="store.runFeature(item)"
-       └─ config/features.ts         item 来自这里（path / params / pick / stream）
-            └─ stores/playground.ts  runFeature()：校验 → loading → 分支 → 结果落位
-                 ├─ api/client.ts    post()：axios 请求 + 错误翻译
-                 └─ api/stream.ts    streamRequest()：fetch 流式读取
-                      └─ 后端 NestJS → Ollama
+       └─ core/registry.ts           提供分组（来自各 modules）
+            └─ modules/<主题>/index.ts   item 来自这里（path / params / pick / stream）
+                 └─ core/engine.ts      runFeature()：校验 → loading → 分支 → 结果落位
+                      ├─ api/client.ts    get/post/del：axios 请求 + 错误翻译
+                      └─ api/stream.ts    streamRequest()：fetch 流式读取
+                           └─ 后端 NestJS → Ollama
        └─ 结果写入 store.result / store.history
             ├─ components/AnswerCard.vue    → MarkdownView.vue → utils/markdown.ts
             └─ components/HistoryList.vue   → MarkdownView.vue
@@ -69,14 +77,17 @@
 
 | 需求 | 改这里 |
 | --- | --- |
-| 按钮文字 / 说明 / 示例 | `config/features.ts` |
-| 新增一个接口按钮 | `config/features.ts`（+ 需要新函数时改 `api/*.ts`） |
-| 请求参数怎么拼 | `config/features.ts` 的 `params` |
-| 结果显示哪个字段 | `config/features.ts` 的 `pick` |
-| 结果结构特殊（要写历史、调多个接口） | `config/features.ts` 的 `handler`，参考 `api/rag.ts` |
-| loading / 并发 / 错误提示规则 | `stores/playground.ts` |
-| 接口地址、超时、错误文案 | `api/client.ts` |
-| 流式解析规则（格式不兼容） | `api/stream.ts` 的 `parseLine` |
+| 按钮文字 / 说明 / 示例 | `src/modules/<主题>/index.ts` |
+| 新增一个接口按钮 | 同上（接口复杂时在同目录建 `api.ts`） |
+| 新增一个学习主题 | 新建 `src/modules/<新主题>/index.ts` + 在 `core/registry.ts` 注册 |
+| 请求参数怎么拼 | 模块配置里的 `params` |
+| 结果显示哪个字段 | 模块配置里的 `pick` |
+| 结果结构特殊（要写历史、调多个接口） | 模块配置里的 `handler`，参考 `modules/rag/index.ts` |
+| loading / 并发 / 错误提示规则 | `src/core/engine.ts` |
+| 接口地址、超时、错误文案 | `src/api/client.ts` |
+| 流式解析规则（格式不兼容） | `src/api/stream.ts` 的 `parseLine` |
+| 卡片顺序 / 关掉某个主题 | `src/core/registry.ts` 的 `modules` 数组 |
+| 接口自检的清单 | 自动来自模块，无需手改（`src/core/inspect.ts`） |
 | 回答区/输入区的外观 | 对应的 `components/*.vue` |
 | 颜色、圆角、间距、深色主题 | `style.css` 的 CSS 变量 |
 | Markdown 排版、代码块高亮 | `style.css` 的 `.md` 一节 + `utils/markdown.ts` |
@@ -85,16 +96,18 @@
 
 为了让新手看到「同一个需求的不同实现方式」，项目里有两条路线：
 
-| | 路线 A：store + 配置驱动 | 路线 B：页面内部自理 |
+| | 路线 A：模块 + 引擎（推荐） | 路线 B：页面内部自理 |
 | --- | --- | --- |
-| 代表文件 | `views/Langchain.vue` → `components/Playground.vue` + `stores/playground.ts` + `config/features.ts` | `views/langgraph.vue`（以及 `views/DocsView.vue`） |
-| 状态存放 | 集中在 store，靠 provide/inject 共享 | 就是本页的 `ref` |
-| 适合场景 | 功能多、多个组件要共享同一份数据 | 页面独立、逻辑简单 |
-| 优点 | 规则统一（loading/错误/流式只写一次），加功能只加配置 | 直白易懂，不用理解注入机制 |
-| 缺点 | 需要理解 provide/inject 与配置结构 | 功能一多就会重复代码 |
+| 代表文件 | `modules/*/index.ts` + `core/engine.ts` + `components/Playground.vue` | `views/langgraph.vue`（以及 `views/DocsView.vue`） |
+| 状态存放 | 集中在引擎，靠 provide/inject 共享 | 就是本页的 `ref` |
+| 适合场景 | 功能多、多组件共享同一份数据、要复用的功能 | 页面独立、逻辑简单 |
+| 优点 | 规则统一（loading/错误/流式只写一次），加功能只加模块 | 直白易懂，不用理解注入机制 |
+| 缺点 | 需要理解模块契约与注入机制 | 功能一多就会重复代码 |
 
 **建议**：先读路线 B（`langgraph.vue`）建立直觉，再读路线 A 理解工程化的组织方式。
 将来自己写页面时，用哪种都行 —— 判断标准就是上面那张表。
+
+想动手加一个主题？直接看 [07-module-guide.md](./07-module-guide.md)。
 
 ## 五、注释约定
 

@@ -15,16 +15,19 @@
 │   HomeView.vue        Langchain.vue   langgraph.vue    │
 │   （介绍 + 演练场）    （Playground）   （独立实现）      │
 │                            │                           │
-│                      组件 components/                   │
+│                      组件 components/（只负责展示）      │
 │                 Playground / FeaturePanel / AnswerCard │
 │                 HistoryList / PromptInput / MarkdownView│
 │                            │                           │
-│                  状态 stores/playground.ts             │
-│             （输入内容 / 回答 / 历史 / loading）         │
+│              core/registry.ts  有哪些模块、什么顺序      │
 │                            │                           │
-│              配置 config/features.ts（有哪些按钮）       │
-│                            │                           │
-│        接口 api/*.ts（axios / fetch-SSE）               │
+│       ┌────────────────────┼─────────────────────┐     │
+│       ▼                    ▼                     ▼     │
+│  core/engine.ts      modules/*（每个主题一个）    core/inspect.ts
+│  状态 + 请求编排      配置 / 接口 / 专属逻辑       推导接口清单
+│       │                                            │     │
+│       └────────► api/client.ts（axios）             │     │
+│                  api/stream.ts（SSE 流式）          │     │
 └────────────────────────────┼───────────────────────────┘
                              │ HTTP
                              ▼
@@ -33,6 +36,13 @@
                              ▼
               Ollama 本地大模型（如 qwen / llama3）
 ```
+
+**两条主线要记住**：
+
+- **core 管「怎么执行」**：所有按钮都走 `core/engine.ts` 的 `runFeature()`，
+  loading、并发保护、错误提示、流式收流只有一份实现；
+- **modules 管「执行什么」**：一个学习主题一个模块，配置、接口、专属逻辑都在一起。
+
 
 ## 2. 目录结构（每个文件干什么）
 
@@ -72,7 +82,7 @@ demo1/
     ├── components/           # 可复用 UI 组件
     │   ├── Playground.vue    # 演练场容器：输入区 + 分组卡片 + 回答 + 历史
     │   ├── PromptInput.vue   # 输入区（快捷键、会话 ID 设置）
-    │   ├── FeaturePanel.vue  # 一组功能按钮（数据来自 config/features.ts）
+    │   ├── FeaturePanel.vue  # 一组功能按钮（数据来自 modules/*）
     │   ├── AnswerCard.vue    # 回答展示（流式状态、耗时、token、复制）
     │   ├── HistoryList.vue   # 会话历史 / 检索结果列表
     │   ├── MarkdownView.vue  # Markdown → HTML 渲染（含代码块复制）
@@ -115,7 +125,7 @@ demo1/
 </el-button>
 ```
 
-`item` 来自 `config/features.ts` 里的一条配置：
+`item` 来自功能模块的配置（`src/modules/models/index.ts`）：
 
 ```ts
 {
@@ -126,14 +136,15 @@ demo1/
 }
 ```
 
-**② 统一入口** —— `stores/playground.ts` 的 `runFeature()`
+**② 统一入口** —— `core/engine.ts` 的 `runFeature()`
 
+- 先问各模块的 `onFeature`：这个功能你处理吗？（模块级逻辑优先）
 - 校验输入是否为空；
 - 设置 `loading`（按钮转圈、其它按钮禁用）；
 - 判断走「流式」还是「普通请求」；
 - 把结果写入 `result`，或把错误提示出来。
 
-**③ 发请求** —— `api/client.ts` 的 `post()`
+**③ 发请求** —— `api/client.ts` 的 `get / post / del`
 
 - `baseURL` 来自 `.env` 的 `VITE_API_BASE`；
 - 出错时把 HTTP 错误翻译成中文提示（`toMessage()`）。
@@ -146,7 +157,20 @@ demo1/
 **⑤ 如果是流式接口** —— `api/stream.ts`
 
 - 用 `fetch` 读取 `ReadableStream`，每收到一小段就调用 `onMessage`；
-- store 把片段不断追加到 `result.answer`，于是页面出现打字机效果。
+- 引擎把片段不断追加到 `result.answer`，于是页面出现打字机效果。
+
+### 想改哪个环节，就去哪个文件
+
+| 需求 | 改这里 |
+| --- | --- |
+| 加/改某个主题的功能按钮 | `src/modules/<主题>/index.ts` |
+| 加一个全新主题 | 新建 `src/modules/<新主题>/index.ts` + 在 `core/registry.ts` 注册 |
+| 执行流程（loading / 并发 / 错误提示） | `src/core/engine.ts` |
+| 卡片顺序 / 启用哪些模块 | `src/core/registry.ts` |
+| 接口自检的清单 | 自动来自模块，无需手改（`src/core/inspect.ts`） |
+| 请求底层（超时、错误文案、流式解析） | `src/api/client.ts` / `src/api/stream.ts` |
+| 某个主题的专属逻辑（调多个接口） | 该模块的 `call.handler` 或 `onFeature` |
+
 
 ## 4. 状态是怎么共享的（provide / inject）
 页面上 20 多个按钮都要用到同一份「输入内容 / 回答 / 历史 / loading」，
@@ -169,13 +193,17 @@ store.runFeature(feature); // 执行一个功能
 ## 5. 数据流小结（背下来很有用）
 
 ```
-config/features.ts      定义「有什么功能」
+core/registry.ts        决定加载哪些模块、顺序如何
+        ↓
+core/types.ts           模块与功能的数据结构（FeatureItem / FeatureCall…）
+        ↓
+modules/<主题>/index.ts  定义「有什么功能、调哪个接口、结果怎么显示」
         ↓
 FeaturePanel.vue        渲染成按钮
         ↓ 点击
-stores/playground.ts    统一编排（loading / 流式 / 错误 / 结果落位）
+core/engine.ts          统一编排（loading / 流式 / 错误 / 结果落位）
         ↓
-api/*.ts                发请求（axios 或 fetch-SSE）
+api/client.ts or api/stream.ts   发请求（axios 或 fetch-SSE）
         ↓
 后端 NestJS → Ollama
         ↓
@@ -187,10 +215,15 @@ HistoryList.vue         渲染历史 / 检索结果
 
 | 分层 | 好处 |
 | --- | --- |
-| 配置与 UI 分离 | 新增接口只改 `config/features.ts`，页面不用动 |
-| 接口集中在 `api/` | 后端改路由时只改一处；组件里不会散落 URL |
-| 状态集中在 `stores/` | loading、错误、结果落位的规则统一，不会每个按钮写一套 |
+| 核心与模块分离 | 新增主题只加文件，不改引擎与组件；改动范围一目了然 |
+| 一个主题一个目录 | 配置、接口、专属逻辑放在一起，不用在多个大文件间跳 |
+| 模块不互相依赖 | 不会出现循环依赖；临时关掉某个主题只改注册表一行 |
+| 接口集中在模块里 | 后端改路由时只改一处；组件里不会散落 URL |
+| 状态集中在引擎 | loading、错误、结果落位的规则统一，不会每个按钮写一套 |
 | 通用组件独立 | `MarkdownView`、`CopyButton`、`AppCard` 可在任何页面复用 |
+
+下一步：[02-api-and-streaming.md](./02-api-and-streaming.md) 深入请求与流式输出；
+新增主题请直接看 [07-module-guide.md](./07-module-guide.md)。
 
 ## 7. 路由是怎么渲染的（含一个「不要这么写」的坑）
 

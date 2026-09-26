@@ -83,8 +83,8 @@ import { computed } from "vue";
 import { MagicStick } from "@element-plus/icons-vue";
 
 import AppCard from "@/components/AppCard.vue";
-import type { FeatureGroup } from "@/config/features";
-import { usePlayground } from "@/stores/playground";
+import type { FeatureGroup } from "@/core/types";
+import { usePlayground } from "@/core/engine";
 
 const props = defineProps<{ group: FeatureGroup }>();
 
