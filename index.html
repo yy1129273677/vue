@@ -2,11 +2,39 @@
 <html lang="zh-CN">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Demo1 - Vue 3 + Vite</title>
+
+    <!-- 图标：内联 SVG（Vue 绿 V 形），不用额外图片文件，也不会有 404 -->
+    <link
+      rel="icon"
+      type="image/svg+xml"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%2342b883' d='M2 3h4l6 10 6-10h4L12 21z'/%3E%3C/svg%3E"
+    />
+
+    <meta
+      name="description"
+      content="Vue 3 + Vite + LangChain 学习项目：把大模型的对话、提示词、链、智能体、记忆与 RAG 做成一页可点的示例"
+    />
+    <meta name="theme-color" content="#42b883" />
+
+    <!-- %VITE_APP_NAME% 由 Vite 在构建时替换成 .env 里的变量值 -->
+    <title>%VITE_APP_NAME% · LangChain 学习项目</title>
+
+    <style>
+      /* 首屏骨架：JS 加载完成前显示，避免白屏（挂载后 Vue 会替换掉 #app 内容） */
+      #app:empty::after {
+        content: "正在加载…";
+        display: grid;
+        place-items: center;
+        height: 100vh;
+        color: #42b883;
+        font-family: system-ui, -apple-system, "Microsoft YaHei", sans-serif;
+        font-size: 14px;
+        letter-spacing: 0.1em;
+      }
+    </style>
   </head>
-  <body class="scroll-container">
+  <body>
     <div id="app"></div>
     <script type="module" src="/src/main.ts"></script>
   </body>

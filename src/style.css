@@ -1,49 +1,578 @@
+/* ==========================================================================
+   style.css —— 全局基础样式 + 设计令牌（Design Token）
+   --------------------------------------------------------------------------
+   新手上手要点：
+   1. 这个文件在 src/main.ts 里通过 import "./style.css" 引入，属于「全局样式」，
+      对全站生效；而 .vue 文件里 <style scoped> 写的样式只对当前组件生效。
+   2. 「设计令牌」= 一组 CSS 变量（--color-xxx / --space-xxx），统一放在 :root 里。
+      好处：想换主题色只改一处；写样式时不用再硬编码 #42b883 这种颜色值。
+   3. 深色主题：<html data-theme="dark"> 时，下面的变量会被整体覆盖，
+      所有用到变量的地方自动变成深色，不需要写两份样式。
+   ========================================================================== */
+
+/* ---------- 1. 设计令牌 ---------- */
 :root {
+  /* 品牌色（Vue 绿为主色） */
+  --brand: #42b883;
+  --brand-strong: #369870;
+  --brand-soft: rgba(66, 184, 131, 0.12);
+  --brand-gradient: linear-gradient(135deg, #42b883 0%, #347474 100%);
+
+  /* 文字 */
+  --text-1: #1f2d3d; /* 标题 */
+  --text-2: #4b5b6b; /* 正文 */
+  --text-3: #8492a6; /* 次要说明 */
+  --text-inverse: #ffffff;
+
+  /* 背景与边框 */
+  --bg: #f4f6f9;
+  --bg-elevated: #ffffff;
+  --bg-soft: #f8fafb;
+  --bg-muted: #eef1f5;
+  --border: #e4e8ee;
+  --border-strong: #d3dae3;
+
+  /* 语义色 */
+  --success: #67c23a;
+  --warning: #e6a23c;
+  --danger: #f56c6c;
+  --info: #909399;
+
+  /* 圆角 / 阴影 / 间距 */
+  --radius-sm: 8px;
+  --radius: 12px;
+  --radius-lg: 16px;
+  --shadow-sm: 0 1px 2px rgba(31, 45, 61, 0.06);
+  --shadow: 0 6px 24px rgba(31, 45, 61, 0.08);
+  --shadow-lg: 0 16px 40px rgba(31, 45, 61, 0.12);
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+
+  /* 布局尺寸 */
+  --topbar-h: 64px;
+  --sidebar-w: 248px;
+  /* 内容区最大宽度：屏幕越宽内容越宽，但不超过 1240px（再宽阅读体验会变差） */
+  --content-max: 1240px;
+
+  /* 代码块（深浅主题都用深色底） */
+  --code-bg: #1e1e2e;
+  --code-fg: #e6e6f0;
+  --code-border: #2f3147;
+
+  color-scheme: light;
   font-family:
-    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  line-height: 1.6;
-  color: #213547;
-  background-color: #ffffff;
+    -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+    "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif;
+  line-height: 1.65;
+  color: var(--text-2);
+  background-color: var(--bg);
+
+  /* 让浏览器自带的控件（滚动条、表单）也跟随主题 */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
+/* ---------- 2. 深色主题：只覆盖变量，不重写规则 ---------- */
+html[data-theme="dark"] {
+  --brand-soft: rgba(66, 184, 131, 0.18);
+  --text-1: #eaf0f7;
+  --text-2: #b6c2d1;
+  --text-3: #7d8b9c;
+  --bg: #14181f;
+  --bg-elevated: #1c222c;
+  --bg-soft: #202834;
+  --bg-muted: #262f3c;
+  --border: #2c3542;
+  --border-strong: #3a4553;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow: 0 6px 24px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.55);
+  color-scheme: dark;
+}
+
+/* ---------- 3. 基础重置 ---------- */
 * {
-  /* margin: 0;
-  padding: 0; */
   box-sizing: border-box;
 }
 
+html,
 body {
-  min-height: 100vh;
-  overflow: auto;
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
-  padding: 2rem;
+  margin: 0;
+  padding: 0;
+  min-height: 100%;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text-2);
+  transition:
+    background-color 0.25s ease,
+    color 0.25s ease;
 }
 
 #app {
-  width: 100%;
-  max-width: 1200px;
+  min-height: 100vh;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  margin: 0;
+  color: var(--text-1);
+  line-height: 1.35;
+  font-weight: 600;
+}
+
+p {
+  margin: 0;
 }
 
 a {
-  color: #42b883;
+  color: var(--brand-strong);
   text-decoration: none;
 }
+
 a:hover {
   text-decoration: underline;
 }
 
+/* 原生按钮的基础样式（项目里大部分按钮用 <el-button>，这里是兜底） */
 button {
   cursor: pointer;
-  border: none;
-  border-radius: 8px;
-  padding: 0.5rem 1rem;
-  font-size: 1rem;
-  background: #42b883;
-  color: #fff;
-  transition: background 0.2s;
+  font-family: inherit;
+  font-size: 0.95rem;
 }
-button:hover {
-  background: #369870;
+
+code,
+kbd,
+pre {
+  font-family: "JetBrains Mono", "Fira Code", Consolas, "Courier New", monospace;
+}
+
+/* 行内代码（普通文本里的小段代码） */
+code {
+  background: var(--bg-muted);
+  color: var(--brand-strong);
+  padding: 0.15em 0.4em;
+  border-radius: 6px;
+  font-size: 0.88em;
+}
+
+/* 细腻的滚动条，避免默认滚动条破坏整体观感 */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-3);
+  background-clip: content-box;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* 键盘可访问性：Tab 聚焦时给出清晰轮廓 */
+:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
+/* 屏幕阅读器专用文本（视觉上隐藏，语义上保留） */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ---------- 4. 通用工具类（跨组件复用的小样式） ---------- */
+
+/* 卡片外壳：整个项目所有「块」都用它，保证视觉统一 */
+.surface {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+/* 卡片顶部强调色条：通过 style="--accent: xxx" 传入颜色 */
+.accent-top {
+  position: relative;
+  overflow: hidden;
+}
+
+.accent-top::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 3px;
+  background: var(--accent, var(--brand));
+}
+
+/* 小胶囊标签 */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  line-height: 1.7;
+  background: var(--bg-muted);
+  color: var(--text-3);
+  border: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.chip--brand {
+  background: var(--brand-soft);
+  color: var(--brand-strong);
+  border-color: transparent;
+}
+
+.chip--success {
+  background: rgba(103, 194, 58, 0.14);
+  color: var(--success);
+  border-color: transparent;
+}
+
+.chip--danger {
+  background: rgba(245, 108, 108, 0.14);
+  color: var(--danger);
+  border-color: transparent;
+}
+
+/* 次要说明文字 */
+.soft-label {
+  font-size: 0.8rem;
+  color: var(--text-3);
+  letter-spacing: 0.02em;
+}
+
+/* 等宽小字（用于显示 id、路径、token 数等） */
+.mono {
+  font-family: "JetBrains Mono", Consolas, monospace;
+  font-size: 0.82rem;
+}
+
+/* ---------- 5. Markdown 渲染区样式 ----------
+   AI 返回的内容经 markdown-it 转成 HTML 后用 v-html 渲染，
+   这些 class 名称由 markdown-it 生成，所以必须用「非 scoped」的全局样式来写。 */
+.md {
+  color: var(--text-2);
+  line-height: 1.85;
+  word-wrap: break-word;
+  overflow-wrap: anywhere;
+}
+
+.md > :first-child {
+  margin-top: 0;
+}
+
+.md > :last-child {
+  margin-bottom: 0;
+}
+
+.md h1,
+.md h2,
+.md h3,
+.md h4,
+.md h5,
+.md h6 {
+  margin: 1.4em 0 0.6em;
+  color: var(--text-1);
+  font-weight: 650;
+}
+
+.md h1 {
+  font-size: 1.6em;
+  padding-bottom: 0.3em;
+  border-bottom: 1px solid var(--border);
+}
+
+.md h2 {
+  font-size: 1.32em;
+  padding-bottom: 0.25em;
+  border-bottom: 1px solid var(--border);
+}
+
+.md h3 {
+  font-size: 1.14em;
+}
+
+.md h4 {
+  font-size: 1em;
+}
+
+.md p {
+  margin: 0.7em 0;
+}
+
+.md ul,
+.md ol {
+  margin: 0.7em 0;
+  padding-left: 1.6em;
+}
+
+.md li + li {
+  margin-top: 0.28em;
+}
+
+.md a {
+  color: var(--brand-strong);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.md strong {
+  color: var(--text-1);
+}
+
+.md hr {
+  border: none;
+  border-top: 1px dashed var(--border-strong);
+  margin: 1.5em 0;
+}
+
+.md blockquote {
+  margin: 1em 0;
+  padding: 0.5em 1em;
+  border-left: 4px solid var(--brand);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  background: var(--brand-soft);
+  color: var(--text-2);
+}
+
+.md blockquote p {
+  margin: 0.3em 0;
+}
+
+/* 代码块容器（markdown-it 的 highlight 回调会输出 <pre class="md-pre">） */
+.md-pre {
+  position: relative;
+  margin: 1em 0;
+  padding: 2.4em 1em 1em;
+  background: var(--code-bg);
+  color: var(--code-fg);
+  border: 1px solid var(--code-border);
+  border-radius: var(--radius);
+  overflow-x: auto;
+  line-height: 1.6;
+}
+
+.md-pre code {
+  background: none;
+  color: inherit;
+  padding: 0;
+  font-size: 0.86rem;
+}
+
+/* 代码块里的「语言名」与「复制」按钮 */
+.md-pre-lang {
+  position: absolute;
+  top: 8px;
+  left: 12px;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #8b93b0;
+}
+
+.md-code-copy {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  padding: 2px 8px;
+  font-size: 0.72rem;
+  color: #c8cee6;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 6px;
+  transition: background 0.2s ease;
+}
+
+.md-code-copy:hover {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+/* 轻量语法高亮的配色（由 src/utils/markdown.ts 生成这些 span） */
+.tok-keyword {
+  color: #c792ea;
+}
+
+.tok-string {
+  color: #a5e075;
+}
+
+.tok-number {
+  color: #f78c6c;
+}
+
+.tok-comment {
+  color: #7f8ba4;
+  font-style: italic;
+}
+
+.md table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1em 0;
+  font-size: 0.92em;
+}
+
+.md th,
+.md td {
+  border: 1px solid var(--border);
+  padding: 0.5em 0.8em;
+  text-align: left;
+}
+
+.md th {
+  background: var(--bg-muted);
+  color: var(--text-1);
+  font-weight: 600;
+}
+
+.md tbody tr:nth-child(even) {
+  background: var(--bg-soft);
+}
+
+.md img {
+  max-width: 100%;
+  border-radius: var(--radius-sm);
+}
+
+/* ---------- 6. Element Plus 深色适配 ----------
+   Element Plus 默认是浅色皮肤，在深色主题下会出现「白底白字」。
+   这里通过覆盖它暴露的 CSS 变量（--el-xxx）与少量类名，让它跟随我们的主题。
+   注意：只在 html[data-theme="dark"] 时生效，浅色模式完全不受影响。 */
+html[data-theme="dark"] {
+  --el-bg-color: var(--bg-elevated);
+  --el-bg-color-page: var(--bg);
+  --el-bg-color-overlay: var(--bg-soft);
+  --el-text-color-primary: var(--text-1);
+  --el-text-color-regular: var(--text-2);
+  --el-text-color-secondary: var(--text-3);
+  --el-text-color-placeholder: var(--text-3);
+  --el-border-color: var(--border);
+  --el-border-color-light: var(--border);
+  --el-border-color-lighter: var(--border);
+  --el-border-color-extra-light: var(--border);
+  --el-border-color-hover: var(--border-strong);
+  --el-fill-color-blank: var(--bg-elevated);
+  --el-fill-color-light: var(--bg-soft);
+  --el-fill-color-lighter: var(--bg-soft);
+  --el-mask-color: rgba(0, 0, 0, 0.65);
+}
+
+html[data-theme="dark"] .el-textarea__inner,
+html[data-theme="dark"] .el-input__wrapper {
+  background-color: var(--bg-soft);
+  box-shadow: 0 0 0 1px var(--border) inset;
+}
+
+html[data-theme="dark"] .el-textarea__inner {
+  color: var(--text-1);
+}
+
+html[data-theme="dark"] .el-tabs__item {
+  color: var(--text-3);
+}
+
+html[data-theme="dark"] .el-tabs__item.is-active {
+  color: var(--brand);
+}
+
+html[data-theme="dark"] .el-tabs__nav-wrap::after {
+  background-color: var(--border);
+}
+
+/* ---------- 7. 主题色工具类 ----------
+   通过给元素加 class 就能换一套配色，不用为每个颜色写一遍样式。
+   例：<div class="card-accent accent--primary">  */
+.card-accent {
+  border-left: 3px solid var(--brand) !important;
+}
+
+.accent--primary {
+  --accent: var(--brand);
+  --accent-soft: rgba(66, 184, 131, 0.12);
+  --accent-text: var(--brand-strong);
+}
+
+.accent--success {
+  --accent: var(--success);
+  --accent-soft: rgba(103, 194, 58, 0.12);
+  --accent-text: var(--success);
+}
+
+.accent--warning {
+  --accent: var(--warning);
+  --accent-soft: rgba(230, 162, 60, 0.12);
+  --accent-text: var(--warning);
+}
+
+.accent--danger {
+  --accent: var(--danger);
+  --accent-soft: rgba(245, 108, 108, 0.12);
+  --accent-text: var(--danger);
+}
+
+.accent--info {
+  --accent: var(--info);
+  --accent-soft: rgba(144, 147, 153, 0.14);
+  --accent-text: var(--info);
+}
+
+.accent-icon {
+  background: var(--accent-soft, var(--brand-soft)) !important;
+  color: var(--accent-text, var(--brand-strong)) !important;
+}
+
+/* ---------- 8. 动画 ---------- */
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.fade-in {
+  animation: fade-in-up 0.28s ease both;
+}
+
+/* 尊重「减少动画」的系统偏好 */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
 }

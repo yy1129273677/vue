@@ -1,19 +1,19 @@
 {
   "name": "demo1",
   "version": "1.0.0",
-  "description": "A simple Vue 3 + Vite project",
+  "description": "Vue 3 + Vite + TypeScript + Element Plus 前端，演示 LangChain / LangGraph 的常用能力",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc --noEmit && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "typecheck": "vue-tsc --noEmit"
   },
   "dependencies": {
     "@element-plus/icons-vue": "^2.3.2",
     "@langchain/anthropic": "^1.5.9",
     "@langchain/core": "^1.2.9",
     "@langchain/openai": "^1.5.11",
-    "@types/markdown-it": "^14.2.0",
     "axios": "^1.20.0",
     "element-plus": "^2.14.5",
     "langchain": "^1.5.10",
