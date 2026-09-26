@@ -11,6 +11,7 @@
          to 属性对应 src/router/index.ts 里的 path -->
     <nav style="margin-left: auto; display: flex; gap: 1rem">
       <router-link to="/langchain" name="langchain">Langchain</router-link>
+      <router-link to="/langgraph" name="langgraph">Langgraph</router-link>
       <!-- 以后新增页面，在这里加 <router-link to="/xxx">xxx</router-link> -->
     </nav>
   </header>

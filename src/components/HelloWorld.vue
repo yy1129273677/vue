@@ -17,9 +17,7 @@
     <div class="section-container section3">
       <el-input type="number" v-model="userId" placeholder="请输入用户ID" />
 
-      <button type="button" @click="queryArticleByUserId">
-        根据用户ID查询文章
-      </button>
+      <button type="button" @click="queryArticleByUserId">根据用户ID查询文章</button>
 
       <div class="el-card" v-if="author">
         <span>作者ID：{{ author.id }}</span>
@@ -29,29 +27,20 @@
       <div class="el-card" v-for="article in articles" :key="article.id">
         <div>文章ID：{{ article.id }}</div>
         <div>作者ID：{{ article.authorId }}</div>
-        <div>是否发布：{{ article.published ? "是" : "否" }}</div>
+        <div>是否发布：{{ article.published ? '是' : '否' }}</div>
         <div>标题：{{ article.title }}</div>
         <div>内容：{{ article.content }}</div>
       </div>
     </div>
 
     <div class="section-container section4">
-      <el-input
-        class="textarea"
-        type="textarea"
-        v-model="message"
-        :rows="4"
-        @keyup.enter="sendChatBasic"
-        placeholder="请输入您想问的问题"
-      />
+      <el-input class="textarea" type="textarea" v-model="message" :rows="4" @keyup.enter="sendChatBasic" placeholder="请输入您想问的问题" />
 
       <button type="button" @click="sendChatBasic">基础提问</button>
-      <button type="button" @click="sendChatPipe">
-        链式提问（和基础差不多）
-      </button>
+      <button type="button" @click="sendChatPipe">链式提问（和基础差不多）</button>
       <button type="button" @click="sendChatPro">专业提问</button>
       <button type="button" @click="sendChatStream" :disabled="isStreaming">
-        {{ isStreaming ? "输出中..." : "流式输出" }}
+        {{ isStreaming ? '输出中...' : '流式输出' }}
       </button>
 
       <button type="button" @click="translateToEnglish">翻译为英文</button>
@@ -62,9 +51,7 @@
       <button type="button" @click="smartRouter">智能回答</button>
       <button type="button" @click="runAgent">agent回答</button>
       <button type="button" @click="contextualAnswer">上下文回答</button>
-      <button type="button" @click="contextualAnswerStream">
-        上下文回答(流式)
-      </button>
+      <button type="button" @click="contextualAnswerStream">上下文回答(流式)</button>
       <button type="button" @click="queryChatHistory">查询会话历史</button>
       <button type="button" @click="loadDocuments">文本入库</button>
       <button type="button" @click="vectorSearch">向量检索</button>
@@ -75,25 +62,14 @@
 
       <div class="response-title">回答：</div>
       <div class="response-message" v-if="responseMessage">
-        <div v-if="responseMessage.usage">
-          您的token消耗：{{ responseMessage.usage }}
-        </div>
+        <div v-if="responseMessage.usage">您的token消耗：{{ responseMessage.usage }}</div>
         <!-- v-html：把 markdown-it 解析出的 HTML 直接渲染到页面 -->
         <div class="markdown-body" v-html="renderedAnswer"></div>
       </div>
 
-      <div class="response-title" v-if="renderedHistory.length > 0">
-        会话历史：
-      </div>
-      <div
-        v-for="(item, index) in renderedHistory"
-        :key="item.id"
-        :class="item.role !== 'user' ? 'assistant-message' : 'user-message'"
-      >
-        <div class="response-role">
-          {{ item.role === "user" ? "用户提问" : "助手回答"
-          }}{{ index + 1 }}.：id={{ item.id }}
-        </div>
+      <div class="response-title" v-if="renderedHistory.length > 0">会话历史：</div>
+      <div v-for="(item, index) in renderedHistory" :key="item.id" :class="item.role !== 'user' ? 'assistant-message' : 'user-message'">
+        <div class="response-role">{{ item.role === 'user' ? '用户提问' : '助手回答' }}{{ index + 1 }}.：id={{ item.id }}</div>
         <div class="markdown-body" v-html="item.content"></div>
       </div>
     </div>
@@ -101,12 +77,12 @@
 </template>
 
 <script setup lang="ts">
-import axios from "@/commJs/axios.js";
-import { streamResponse } from "@/commJs/streamResponse.js";
+import axios from '@/commJs/axios.js';
+import { streamResponse } from '@/commJs/streamResponse.js';
 // markdown-it：把 Markdown 字符串解析成 HTML，用 v-html 渲染
-import MarkdownIt from "markdown-it";
+import MarkdownIt from 'markdown-it';
 
-import { ref, computed } from "vue";
+import { ref, computed } from 'vue';
 
 // 创建 markdown-it 实例
 const md = new MarkdownIt({
@@ -119,7 +95,7 @@ const md = new MarkdownIt({
 // computed 计算属性：把接口返回的 Markdown 答案转成 HTML
 // 当 responseMessage.answer 变化时自动重新计算
 const renderedAnswer = computed<string>(() => {
-  if (!responseMessage.value?.answer) return "";
+  if (!responseMessage.value?.answer) return '';
   return md.render(responseMessage.value.answer);
 });
 
@@ -135,7 +111,7 @@ const renderedHistory = computed<any[]>(() => {
 defineProps<{ msg: string }>();
 
 const rest = (): void => {
-  console.log("rest");
+  console.log('rest');
 };
 
 const count = ref(0);
@@ -150,7 +126,7 @@ const historyMessage = ref<any>();
 const isStreaming = ref(false);
 
 //自动将滚动条滚动到最底部,动画效果
-const scrollToBottom = (className = "scroll-container") => {
+const scrollToBottom = (className = 'scroll-container') => {
   let scrollContainer = document.querySelector(`.${className}`);
   console.log(scrollContainer);
   if (!scrollContainer) return;
@@ -166,28 +142,28 @@ const createNewUser = async (): Promise<void> => {
       name: `张三${count.value}`,
       email: `zhangsan${count.value}@example.com`,
       password: `${count.value}23456`,
-      role: "user",
+      role: 'user',
     };
-    const response = await axios.post("/user/create", data);
+    const response = await axios.post('/user/create', data);
     console.log(response.data);
   } catch (error) {
-    console.error("创建新用户失败:", error.response?.data);
+    console.error('创建新用户失败:', error.response?.data);
   }
 };
 
 const queryUser = async (): Promise<void> => {
   try {
     const params = {
-      name: "",
-      pageIndex: "1",
-      pageSize: "10",
+      name: '',
+      pageIndex: '1',
+      pageSize: '10',
     };
-    const response = await axios.get("/user/list", {
+    const response = await axios.get('/user/list', {
       params,
     });
     console.log(response.data);
   } catch (error) {
-    console.error("查询用户失败:", error.response?.data);
+    console.error('查询用户失败:', error.response?.data);
   }
 };
 
@@ -200,10 +176,10 @@ const createNewArticle = async (): Promise<void> => {
       published: true,
       authorId: count.value,
     };
-    const response = await axios.post("/post/create", data);
+    const response = await axios.post('/post/create', data);
     console.log(response.data);
   } catch (error) {
-    console.error("创建新文章失败:", error.response?.data);
+    console.error('创建新文章失败:', error.response?.data);
   }
 };
 
@@ -213,12 +189,12 @@ const queryArticle = async (): Promise<void> => {
       pageIndex: 1,
       pageSize: 5,
     };
-    const response = await axios.get("/post/list", {
+    const response = await axios.get('/post/list', {
       params,
     });
     console.log(response.data);
   } catch (error) {
-    console.error("查询文章失败:", error.response?.data);
+    console.error('查询文章失败:', error.response?.data);
   }
 };
 
@@ -233,7 +209,7 @@ const queryArticleByUserId = async (): Promise<void> => {
     author.value = response.data.author;
     articles.value = response.data.list;
   } catch (error) {
-    console.error("根据用户ID查询文章失败:", error.response?.data);
+    console.error('根据用户ID查询文章失败:', error.response?.data);
   }
 };
 
@@ -242,26 +218,25 @@ const sendChatBasic = async (): Promise<void> => {
     const data = {
       message: message.value,
     };
-    const response = await axios.post("/models/chat", data);
+    const response = await axios.post('/models/chat', data);
     responseMessage.value = response.data;
   } catch (error) {
-    console.error("提问失败:", error.response?.data);
-    responseMessage.value = "提问失败";
+    console.error('提问失败:', error.response?.data);
+    responseMessage.value = '提问失败';
   }
 };
 
 const sendChatPro = async (): Promise<void> => {
   try {
     const data = {
-      system:
-        "你是一个专业的前端工程师，请用简洁的语言解释技术概念，不超过5句话",
+      system: '你是一个专业的前端工程师，请用简洁的语言解释技术概念，不超过5句话',
       message: message.value,
     };
-    const response = await axios.post("/models/chat-system", data);
+    const response = await axios.post('/models/chat-system', data);
     responseMessage.value = response.data;
   } catch (error) {
-    console.error("提问失败:", error.response?.data);
-    responseMessage.value = "提问失败";
+    console.error('提问失败:', error.response?.data);
+    responseMessage.value = '提问失败';
   }
 };
 
@@ -271,7 +246,7 @@ const sendChatStream = async (): Promise<void> => {
   isStreaming.value = true;
 
   // 清空上一次的回答（流式回答没有 usage 字段）
-  responseMessage.value = { answer: "" };
+  responseMessage.value = { answer: '' };
 
   // streamResponse 同步返回 { promise, cancel }：
   //   - onMessage：每来一个文字片段立即触发，在这里追加到响应式 answer 上 → 页面实时刷新
@@ -284,8 +259,8 @@ const sendChatStream = async (): Promise<void> => {
         responseMessage.value.answer += chunk.text;
       },
       onError: (error) => {
-        console.error("流式提问失败:", error);
-        responseMessage.value.answer = "提问失败，请检查模型服务是否正常";
+        console.error('流式提问失败:', error);
+        responseMessage.value.answer = '提问失败，请检查模型服务是否正常';
       },
     },
   );
@@ -302,11 +277,11 @@ const sendChatPipe = async (): Promise<void> => {
     const data = {
       message: message.value,
     };
-    const response = await axios.post("/models/chat-parser", data);
+    const response = await axios.post('/models/chat-parser', data);
     responseMessage.value = response.data;
   } catch (error) {
-    console.error("提问失败:", error.response?.data);
-    responseMessage.value = "提问失败";
+    console.error('提问失败:', error.response?.data);
+    responseMessage.value = '提问失败';
   }
 };
 
@@ -314,15 +289,15 @@ const translateToEnglish = async (): Promise<void> => {
   try {
     const data = {
       text: message.value,
-      targetLang: "英文",
+      targetLang: '英文',
     };
-    const response = await axios.post("/prompts/translate", data);
+    const response = await axios.post('/prompts/translate', data);
     responseMessage.value = {
       answer: response.data.translated,
     };
   } catch (error) {
-    console.error("翻译失败:", error.response?.data);
-    responseMessage.value = "翻译失败";
+    console.error('翻译失败:', error.response?.data);
+    responseMessage.value = '翻译失败';
   }
 };
 
@@ -331,13 +306,13 @@ const analyzeSentiment = async (): Promise<void> => {
     const data = {
       text: message.value,
     };
-    const response = await axios.post("/prompts/classify", data);
+    const response = await axios.post('/prompts/classify', data);
     responseMessage.value = {
       answer: response.data.sentiment,
     };
   } catch (error) {
-    console.error("情感判定失败:", error.response?.data);
-    responseMessage.value = "情感判定失败";
+    console.error('情感判定失败:', error.response?.data);
+    responseMessage.value = '情感判定失败';
   }
 };
 
@@ -345,20 +320,20 @@ const analyzeCode = async (): Promise<void> => {
   try {
     const data = {
       code: message.value,
-      language: "javascript",
+      language: 'javascript',
     };
-    const response = await axios.post("/prompts/code-review", data);
+    const response = await axios.post('/prompts/code-review', data);
     responseMessage.value = {
       answer: response.data.review,
     };
   } catch (error) {
-    console.error("代码审查失败:", error.response?.data);
-    responseMessage.value = "代码审查失败";
+    console.error('代码审查失败:', error.response?.data);
+    responseMessage.value = '代码审查失败';
   }
 };
 
 const polishArticle = async (): Promise<void> => {
-  responseMessage.value = { answer: "" };
+  responseMessage.value = { answer: '' };
   const { promise } = streamResponse(
     `${axios.defaults.baseURL}/chains/polish`,
     { article: message.value },
@@ -367,8 +342,8 @@ const polishArticle = async (): Promise<void> => {
         responseMessage.value.answer += chunk.text;
       },
       onError: (error) => {
-        console.error("流式提问失败:", error);
-        responseMessage.value.answer = "提问失败，请检查模型服务是否正常";
+        console.error('流式提问失败:', error);
+        responseMessage.value.answer = '提问失败，请检查模型服务是否正常';
       },
     },
   );
@@ -380,17 +355,17 @@ const polishArticle = async (): Promise<void> => {
 };
 
 const generateArticle = async (): Promise<void> => {
-  responseMessage.value = { answer: "" };
+  responseMessage.value = { answer: '' };
   const { promise } = streamResponse(
     `${axios.defaults.baseURL}/chains/blog`,
-    { keywords: message.value, style: "前端技术" },
+    { keywords: message.value, style: '前端技术' },
     {
       onMessage: (chunk: any) => {
         responseMessage.value.answer += chunk.text;
       },
       onError: (error) => {
-        console.error("流式提问失败:", error);
-        responseMessage.value.answer = "提问失败，请检查模型服务是否正常";
+        console.error('流式提问失败:', error);
+        responseMessage.value.answer = '提问失败，请检查模型服务是否正常';
       },
     },
   );
@@ -402,7 +377,7 @@ const generateArticle = async (): Promise<void> => {
 };
 
 const smartRouter = async (): Promise<void> => {
-  responseMessage.value = { answer: "" };
+  responseMessage.value = { answer: '' };
   const { promise } = streamResponse(
     `${axios.defaults.baseURL}/chains/router`,
     { question: message.value },
@@ -411,8 +386,8 @@ const smartRouter = async (): Promise<void> => {
         responseMessage.value.answer += chunk.text;
       },
       onError: (error) => {
-        console.error("流式提问失败:", error);
-        responseMessage.value.answer = "提问失败，请检查模型服务是否正常";
+        console.error('流式提问失败:', error);
+        responseMessage.value.answer = '提问失败，请检查模型服务是否正常';
       },
     },
   );
@@ -424,17 +399,17 @@ const smartRouter = async (): Promise<void> => {
 };
 
 const runAgent = async (): Promise<void> => {
-  responseMessage.value = { answer: "" };
+  responseMessage.value = { answer: '' };
   const { promise } = streamResponse(
     `${axios.defaults.baseURL}/agents/run`,
-    { message: message.value, sessionId: "yy" },
+    { message: message.value, sessionId: 'yy' },
     {
       onMessage: (chunk: any) => {
-        if (chunk.type === "chunk") responseMessage.value.answer += chunk.text;
+        if (chunk.type === 'chunk') responseMessage.value.answer += chunk.text;
       },
       onError: (error) => {
-        console.error("流式提问失败:", error);
-        responseMessage.value.answer = "提问失败，请检查模型服务是否正常";
+        console.error('流式提问失败:', error);
+        responseMessage.value.answer = '提问失败，请检查模型服务是否正常';
       },
     },
   );
@@ -448,31 +423,31 @@ const runAgent = async (): Promise<void> => {
 const contextualAnswer = async (): Promise<void> => {
   try {
     const data = {
-      sessionId: "yy",
+      sessionId: 'yy',
       message: message.value,
     };
-    const response = await axios.post("/memory/chat", data);
+    const response = await axios.post('/memory/chat', data);
     responseMessage.value = {
       answer: response.data.reply,
     };
   } catch (error) {
-    console.error("提问失败:", error.response?.data);
-    responseMessage.value = "提问失败";
+    console.error('提问失败:', error.response?.data);
+    responseMessage.value = '提问失败';
   }
 };
 
 const contextualAnswerStream = async (): Promise<void> => {
-  responseMessage.value = { answer: "" };
+  responseMessage.value = { answer: '' };
   const { promise } = streamResponse(
     `${axios.defaults.baseURL}/memory/chat-stream`,
-    { sessionId: "yy", message: message.value },
+    { sessionId: 'yy', message: message.value },
     {
       onMessage: (chunk: any) => {
         responseMessage.value.answer += chunk.text;
       },
       onError: (error) => {
-        console.error("流式提问失败:", error);
-        responseMessage.value.answer = "提问失败，请检查模型服务是否正常";
+        console.error('流式提问失败:', error);
+        responseMessage.value.answer = '提问失败，请检查模型服务是否正常';
       },
     },
   );
@@ -486,13 +461,13 @@ const contextualAnswerStream = async (): Promise<void> => {
 const queryChatHistory = async (): Promise<void> => {
   try {
     const data = {
-      sessionId: "yy",
+      sessionId: 'yy',
     };
-    const response = await axios.get("/memory/chat-history", { params: data });
+    const response = await axios.get('/memory/chat-history', { params: data });
     historyMessage.value = response.data.messages;
   } catch (error) {
-    console.error("查询会话历史失败:", error.response?.data);
-    responseMessage.value = "查询会话历史失败";
+    console.error('查询会话历史失败:', error.response?.data);
+    responseMessage.value = '查询会话历史失败';
   } finally {
     scrollToBottom();
   }
@@ -505,17 +480,17 @@ const loadDocuments = async (): Promise<void> => {
         {
           id: new Date().getTime().toString(),
           content: message.value,
-          source: "yy",
+          source: 'yy',
         },
       ],
     };
-    const response = await axios.post("/rag/load", data);
+    const response = await axios.post('/rag/load', data);
     responseMessage.value = {
       answer: response.data.message,
     };
   } catch (error) {
-    console.error("提问失败:", error.response?.data);
-    responseMessage.value = "提问失败";
+    console.error('提问失败:', error.response?.data);
+    responseMessage.value = '提问失败';
   }
 };
 
@@ -524,42 +499,42 @@ const vectorSearch = async (): Promise<void> => {
     const data = {
       query: message.value,
     };
-    const response = await axios.post("/rag/search", data);
+    const response = await axios.post('/rag/search', data);
     // responseMessage.value = {
     //   answer: response.data.results
     //     .map((item: any, index: number) => `回答${index + 1}. ${item.content}`)
     //     .join("\n"),
     // };
     historyMessage.value = response.data.results.map((item: any) => ({
-      role: "assistant",
+      role: 'assistant',
       content: item.content,
     }));
   } catch (error) {
-    console.error("提问失败:", error.response?.data);
-    responseMessage.value = "提问失败";
+    console.error('提问失败:', error.response?.data);
+    responseMessage.value = '提问失败';
   }
 };
 
 const ragSearch = async (): Promise<void> => {
-  responseMessage.value = { answer: "" };
+  responseMessage.value = { answer: '' };
   const { promise } = streamResponse(
     `${axios.defaults.baseURL}/rag/query`,
     { question: message.value },
     {
       onMessage: (chunk: any) => {
-        if (chunk.type === "text") {
+        if (chunk.type === 'text') {
           responseMessage.value.answer += chunk.text;
         }
-        if (chunk.type === "source") {
+        if (chunk.type === 'source') {
           historyMessage.value = chunk.text.map((item: any) => ({
-            role: "assistant",
+            role: 'assistant',
             content: item.content,
           }));
         }
       },
       onError: (error) => {
-        console.error("流式提问失败:", error);
-        responseMessage.value.answer = "提问失败，请检查模型服务是否正常";
+        console.error('流式提问失败:', error);
+        responseMessage.value.answer = '提问失败，请检查模型服务是否正常';
       },
     },
   );
@@ -572,24 +547,22 @@ const ragSearch = async (): Promise<void> => {
 
 const queryDocuments = async (): Promise<void> => {
   try {
-    const response = await axios.get("/rag/listDocuments");
+    const response = await axios.get('/rag/listDocuments');
     historyMessage.value = response.data.documents.map((item: any) => ({
-      role: "assistant",
+      role: 'assistant',
       content: item.content,
       source: item.source,
       id: item.id,
     }));
   } catch (error) {
-    console.error("查询知识库文档失败:", error.response?.data);
-    responseMessage.value = "查询知识库文档失败";
+    console.error('查询知识库文档失败:', error.response?.data);
+    responseMessage.value = '查询知识库文档失败';
   }
 };
 
 const deleteDocumentById = async (): Promise<void> => {
   try {
-    const response = await axios.delete(
-      `/rag/deleteDocumentById/${message.value}`,
-    );
+    const response = await axios.delete(`/rag/deleteDocumentById/${message.value}`);
     if (response.data.success) {
       responseMessage.value = {
         answer: response.data.message,
@@ -601,25 +574,25 @@ const deleteDocumentById = async (): Promise<void> => {
     }
     queryDocuments();
   } catch (error) {
-    console.error("删除知识库文档失败:", error.response?.data);
-    responseMessage.value = "删除知识库文档失败";
+    console.error('删除知识库文档失败:', error.response?.data);
+    responseMessage.value = '删除知识库文档失败';
   }
 };
 
 const callMcpAgent = async (): Promise<void> => {
-  responseMessage.value = { answer: "" };
+  responseMessage.value = { answer: '' };
   const { promise } = streamResponse(
     `${axios.defaults.baseURL}/mcp-agent/run`,
     { message: message.value },
     {
       onMessage: (chunk: any) => {
-        if (chunk.type === "chunk") {
+        if (chunk.type === 'chunk') {
           responseMessage.value.answer += chunk.text;
         }
       },
       onError: (error) => {
-        console.error("流式提问失败:", error);
-        responseMessage.value.answer = "提问失败，请检查模型服务是否正常";
+        console.error('流式提问失败:', error);
+        responseMessage.value.answer = '提问失败，请检查模型服务是否正常';
       },
     },
   );

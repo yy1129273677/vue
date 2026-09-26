@@ -19,6 +19,7 @@ import { createRouter, createWebHistory } from "vue-router";
 
 // 在这里 import 页面组件
 import Langchain from "../views/Langchain.vue";
+import Langgraph from "../views/langgraph.vue";
 
 // 路由表：每一条配置对应一个 URL
 // ┌─────────────────────────────────────────────────────────────┐
@@ -39,6 +40,13 @@ const routes: any[] = [
     path: "/langchain",
     name: "langchain",
     component: Langchain,
+  },
+
+  // Langgraph 页面
+  {
+    path: "/langgraph",
+    name: "langgraph",
+    component: Langgraph,
   },
 
   // ── 以后新建路由，照着上面的格式复制即可，例如：──

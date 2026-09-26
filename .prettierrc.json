@@ -1,0 +1,14 @@
+{
+  "singleQuote": true,
+  "trailingComma": "all",
+  "semi": true,
+  "overrides": [
+    {
+      "files": ["*.vue", "**/*.vue", "*.html", "**/*.html"],
+      "options": {
+        "printWidth": 200,
+        "htmlWhitespaceSensitivity": "ignore"
+      }
+    }
+  ]
+}
